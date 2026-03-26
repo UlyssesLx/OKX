@@ -1,0 +1,116 @@
+{
+  "PI": {
+    "layers": 2,
+    "first_buy_price": 0.2138,
+    "last_buy_price": 0.1909,
+    "total_invested": 40.0
+  },
+  "SOL": {
+    "layers": 1,
+    "first_buy_price": 89.2,
+    "last_buy_price": 89.2,
+    "total_invested": 25.0
+  },
+  "SUI": {
+    "layers": 1,
+    "first_buy_price": 0.9629,
+    "last_buy_price": 0.9629,
+    "total_invested": 25.0
+  },
+  "OKB": {
+    "layers": 1,
+    "first_buy_price": 88.66,
+    "last_buy_price": 88.66,
+    "total_invested": 25.0
+  },
+  "LINK": {
+    "layers": 1,
+    "first_buy_price": 9.058,
+    "last_buy_price": 9.058,
+    "total_invested": 25.0
+  },
+  "BTC": {
+    "layers": 1,
+    "first_buy_price": 70013.5,
+    "last_buy_price": 70013.5,
+    "total_invested": 25.0
+  },
+  "ETH": {
+    "layers": 1,
+    "first_buy_price": 2139.73,
+    "last_buy_price": 2139.73,
+    "total_invested": 25.0
+  },
+  "WLD": {
+    "layers": 1,
+    "first_buy_price": 0.3236,
+    "last_buy_price": 0.3236,
+    "total_invested": 25.0
+  },
+  "HYPE": {
+    "layers": 1,
+    "first_buy_price": 39.536,
+    "last_buy_price": 39.536,
+    "total_invested": 25.0
+  },
+  "BNB": {
+    "layers": 1,
+    "first_buy_price": 640.6,
+    "last_buy_price": 640.6,
+    "total_invested": 25.0
+  },
+  "TRUMP": {
+    "layers": 1,
+    "first_buy_price": 3.343,
+    "last_buy_price": 3.343,
+    "total_invested": 25.0
+  },
+  "IP": {
+    "layers": 1,
+    "first_buy_price": 0.7551,
+    "last_buy_price": 0.7551,
+    "total_invested": 25.0
+  },
+  "XRP": {
+    "layers": 1,
+    "first_buy_price": 1.4351,
+    "last_buy_price": 1.4351,
+    "total_invested": 25.0
+  },
+  "ADA": {
+    "layers": 1,
+    "first_buy_price": 0.266,
+    "last_buy_price": 0.266,
+    "total_invested": 25.0
+  },
+  "TRX": {
+    "layers": 1,
+    "first_buy_price": 0.30852,
+    "last_buy_price": 0.30852,
+    "total_invested": 25.0
+  },
+  "KITE": {
+    "layers": 1,
+    "first_buy_price": 0.21682,
+    "last_buy_price": 0.21682,
+    "total_invested": 25.0
+  },
+  "DOGE": {
+    "layers": 1,
+    "first_buy_price": 0.09373,
+    "last_buy_price": 0.09373,
+    "total_invested": 25.0
+  },
+  "WLFI": {
+    "layers": 1,
+    "first_buy_price": 0.0929,
+    "last_buy_price": 0.0929,
+    "total_invested": 25.0
+  },
+  "XPL": {
+    "layers": 1,
+    "first_buy_price": 0.09504,
+    "last_buy_price": 0.09504,
+    "total_invested": 25.0
+  }
+}

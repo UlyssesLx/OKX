@@ -1,0 +1,90 @@
+{
+  "enabled": true,
+  "timezone_aware_enabled": true,
+  "time_zones": {
+    "00:00-04:00": {
+      "intensity": 1,
+      "hold_time": {
+        "min": 30,
+        "max": 60
+      },
+      "daily_quota": 0.1,
+      "position_ratio": {
+        "min": 0.1,
+        "max": 0.1
+      }
+    },
+    "04:00-08:00": {
+      "intensity": 2,
+      "hold_time": {
+        "min": 20,
+        "max": 40
+      },
+      "daily_quota": 0.15,
+      "position_ratio": {
+        "min": 0.1,
+        "max": 0.1
+      }
+    },
+    "08:00-12:00": {
+      "intensity": 5,
+      "hold_time": {
+        "min": 15,
+        "max": 60
+      },
+      "daily_quota": 0.3,
+      "position_ratio": {
+        "min": 0.12,
+        "max": 0.15
+      }
+    },
+    "12:00-16:00": {
+      "intensity": 3,
+      "hold_time": {
+        "min": 20,
+        "max": 50
+      },
+      "daily_quota": 0.2,
+      "position_ratio": {
+        "min": 0.1,
+        "max": 0.12
+      }
+    },
+    "16:00-20:00": {
+      "intensity": 5,
+      "hold_time": {
+        "min": 15,
+        "max": 60
+      },
+      "daily_quota": 0.3,
+      "position_ratio": {
+        "min": 0.12,
+        "max": 0.15
+      }
+    },
+    "20:00-24:00": {
+      "intensity": 5,
+      "hold_time": {
+        "min": 10,
+        "max": 45
+      },
+      "daily_quota": 0.4,
+      "position_ratio": {
+        "min": 0.12,
+        "max": 0.15
+      }
+    }
+  },
+  "check_interval": {
+    "active": 2,
+    "quiet": 5,
+    "fixed": 5
+  },
+  "blacklist": {
+    "stop_loss_duration": 120,
+    "strong_trend_unlock": true,
+    "strong_trend_threshold": 8,
+    "medium_trend_duration": 30,
+    "medium_trend_threshold": 6
+  }
+}

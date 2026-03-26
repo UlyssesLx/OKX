@@ -1,0 +1,78 @@
+// 渐变色系统
+$gradient-purple: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+$gradient-green: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+$gradient-pink: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+$gradient-blue: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+$gradient-yellow: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+$gradient-red: linear-gradient(135deg, #ff6b6b 0%, #ee5a5a 100%);
+
+// 纯色系统
+$primary-color: #667eea;
+$secondary-color: #764ba2;
+$success-color: #4caf50;
+$warning-color: #ffc107;
+$danger-color: #f44336;
+$info-color: #2196f3;
+
+// 背景色系统
+$bg-dark: #1a1a2e;
+$bg-dark-secondary: #16213e;
+$bg-card: #ffffff;
+$bg-card-hover: #fafafa;
+$bg-page: #f5f7fa;
+
+// 深色主题变量
+$dark-bg-primary: #1a1a2e;
+$dark-bg-secondary: #16213e;
+$dark-bg-tertiary: #0f3460;
+$dark-bg-card: rgba(255, 255, 255, 0.08);
+$dark-bg-card-hover: rgba(255, 255, 255, 0.12);
+$dark-bg-input: rgba(255, 255, 255, 0.1);
+
+$dark-text-primary: #ffffff;
+$dark-text-secondary: rgba(255, 255, 255, 0.85);
+$dark-text-muted: rgba(255, 255, 255, 0.65);
+
+$dark-border-color: rgba(255, 255, 255, 0.12);
+$dark-border-color-hover: rgba(255, 255, 255, 0.22);
+
+$dark-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+$dark-shadow-hover: 0 8px 32px rgba(0, 0, 0, 0.4);
+
+// 文字色系统（浅色主题）
+$text-primary: #1a1a2e;
+$text-secondary: #666666;
+$text-muted: #888888;
+
+// 边框色系统
+$border-color: rgba(0, 0, 0, 0.08);
+$border-color-hover: rgba(0, 0, 0, 0.12);
+
+// 圆角系统
+$border-radius: 16px;
+$border-radius-lg: 20px;
+$border-radius-sm: 8px;
+$border-radius-xs: 4px;
+
+// 阴影系统
+$shadow-sm: 0 2px 12px rgba(0, 0, 0, 0.04);
+$shadow-md: 0 4px 16px rgba(0, 0, 0, 0.08);
+$shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.12);
+$shadow-hover: 0 8px 24px rgba(0, 0, 0, 0.12);
+
+// 过渡动画
+$transition-fast: 0.15s ease;
+$transition-normal: 0.3s ease;
+$transition-slow: 0.5s ease;
+
+// 字体系统
+$font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+
+// 图标尺寸
+$icon-size-sm: 40px;
+$icon-size-md: 56px;
+$icon-size-lg: 64px;
+
+// 卡片间距
+$card-padding: 24px;
+$card-gap: 20px;

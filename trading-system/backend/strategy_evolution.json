@@ -1,0 +1,1356 @@
+{
+  "version": "1.0.0",
+  "iterations": [
+    {
+      "version": "1.0.1",
+      "date": "2026-03-25T12:00:59.543105",
+      "trigger": "做多4笔交易完成复盘",
+      "side": "long",
+      "changes": [
+        "做多胜率优秀(100.0%)，放宽止盈"
+      ],
+      "params_before": {
+        "stop_loss": -3.0,
+        "take_profit": 15.0,
+        "max_positions": 5,
+        "trade_size": 40.0,
+        "sentiment_threshold": 7
+      },
+      "params_after": {
+        "stop_loss": -3.0,
+        "take_profit": 15.0,
+        "max_positions": 6,
+        "trade_size": 40.0,
+        "sentiment_threshold": 7
+      },
+      "performance": {
+        "win_rate": 1.0,
+        "avg_profit": 1.5882172397083338,
+        "avg_loss": 0,
+        "profit_factor": 0
+      }
+    },
+    {
+      "version": "1.0.2",
+      "date": "2026-03-25T12:03:26.022319",
+      "trigger": "做多4笔交易完成复盘",
+      "side": "long",
+      "changes": [
+        "做多胜率优秀(100.0%)，放宽止盈"
+      ],
+      "params_before": {
+        "stop_loss": -3.0,
+        "take_profit": 15.0,
+        "max_positions": 6,
+        "trade_size": 40.0,
+        "sentiment_threshold": 7
+      },
+      "params_after": {
+        "stop_loss": -3.0,
+        "take_profit": 15.0,
+        "max_positions": 7,
+        "trade_size": 40.0,
+        "sentiment_threshold": 7
+      },
+      "performance": {
+        "win_rate": 1.0,
+        "avg_profit": 1.5882172397083338,
+        "avg_loss": 0,
+        "profit_factor": 0
+      }
+    },
+    {
+      "version": "1.0.3",
+      "date": "2026-03-25T12:06:18.015918",
+      "trigger": "做多5笔交易完成复盘",
+      "side": "long",
+      "changes": [
+        "做多胜率优秀(100.0%)，放宽止盈",
+        "做多盈亏比偏低(0.00)，优化止盈止损比"
+      ],
+      "params_before": {
+        "stop_loss": -3.0,
+        "take_profit": 15.0,
+        "max_positions": 7,
+        "trade_size": 40.0,
+        "sentiment_threshold": 7
+      },
+      "params_after": {
+        "stop_loss": -3.0,
+        "take_profit": 15.0,
+        "max_positions": 7,
+        "trade_size": 40.0,
+        "sentiment_threshold": 7
+      },
+      "performance": {
+        "win_rate": 1.0,
+        "avg_profit": 1.2994219269407865,
+        "avg_loss": 0,
+        "profit_factor": 0
+      }
+    },
+    {
+      "version": "1.0.4",
+      "date": "2026-03-25T12:08:49.929187",
+      "trigger": "做多5笔交易完成复盘",
+      "side": "long",
+      "changes": [
+        "做多胜率优秀(100.0%)，放宽止盈",
+        "做多盈亏比偏低(0.00)，优化止盈止损比"
+      ],
+      "params_before": {
+        "stop_loss": -3.0,
+        "take_profit": 15.0,
+        "max_positions": 7,
+        "trade_size": 40.0,
+        "sentiment_threshold": 7
+      },
+      "params_after": {
+        "stop_loss": -3.0,
+        "take_profit": 15.0,
+        "max_positions": 7,
+        "trade_size": 40.0,
+        "sentiment_threshold": 7
+      },
+      "performance": {
+        "win_rate": 1.0,
+        "avg_profit": 1.2994219269407865,
+        "avg_loss": 0,
+        "profit_factor": 0
+      }
+    },
+    {
+      "version": "1.0.5",
+      "date": "2026-03-25T12:11:10.075944",
+      "trigger": "做多5笔交易完成复盘",
+      "side": "long",
+      "changes": [
+        "做多胜率优秀(100.0%)，放宽止盈",
+        "做多盈亏比偏低(0.00)，优化止盈止损比"
+      ],
+      "params_before": {
+        "stop_loss": -3.0,
+        "take_profit": 15.0,
+        "max_positions": 7,
+        "trade_size": 40.0,
+        "sentiment_threshold": 7
+      },
+      "params_after": {
+        "stop_loss": -3.0,
+        "take_profit": 15.0,
+        "max_positions": 7,
+        "trade_size": 40.0,
+        "sentiment_threshold": 7
+      },
+      "performance": {
+        "win_rate": 1.0,
+        "avg_profit": 1.2994219269407865,
+        "avg_loss": 0,
+        "profit_factor": 0
+      }
+    },
+    {
+      "version": "1.0.6",
+      "date": "2026-03-25T12:14:21.682613",
+      "trigger": "做多5笔交易完成复盘",
+      "side": "long",
+      "changes": [
+        "做多胜率优秀(100.0%)，放宽止盈",
+        "做多盈亏比偏低(0.00)，优化止盈止损比"
+      ],
+      "params_before": {
+        "stop_loss": -3.0,
+        "take_profit": 15.0,
+        "max_positions": 7,
+        "trade_size": 40.0,
+        "sentiment_threshold": 7
+      },
+      "params_after": {
+        "stop_loss": -3.0,
+        "take_profit": 15.0,
+        "max_positions": 7,
+        "trade_size": 40.0,
+        "sentiment_threshold": 7
+      },
+      "performance": {
+        "win_rate": 1.0,
+        "avg_profit": 1.2994219269407865,
+        "avg_loss": 0,
+        "profit_factor": 0
+      }
+    },
+    {
+      "version": "1.0.7",
+      "date": "2026-03-25T12:17:07.605169",
+      "trigger": "做多5笔交易完成复盘",
+      "side": "long",
+      "changes": [
+        "做多胜率优秀(100.0%)，放宽止盈",
+        "做多盈亏比偏低(0.00)，优化止盈止损比"
+      ],
+      "params_before": {
+        "stop_loss": -3.0,
+        "take_profit": 15.0,
+        "max_positions": 7,
+        "trade_size": 40.0,
+        "sentiment_threshold": 7
+      },
+      "params_after": {
+        "stop_loss": -3.0,
+        "take_profit": 15.0,
+        "max_positions": 7,
+        "trade_size": 40.0,
+        "sentiment_threshold": 7
+      },
+      "performance": {
+        "win_rate": 1.0,
+        "avg_profit": 1.2994219269407865,
+        "avg_loss": 0,
+        "profit_factor": 0
+      }
+    },
+    {
+      "version": "1.0.8",
+      "date": "2026-03-25T12:20:37.545211",
+      "trigger": "做多5笔交易完成复盘",
+      "side": "long",
+      "changes": [
+        "做多胜率优秀(100.0%)，放宽止盈",
+        "做多盈亏比偏低(0.00)，优化止盈止损比"
+      ],
+      "params_before": {
+        "stop_loss": -3.0,
+        "take_profit": 15.0,
+        "max_positions": 7,
+        "trade_size": 40.0,
+        "sentiment_threshold": 7
+      },
+      "params_after": {
+        "stop_loss": -3.0,
+        "take_profit": 15.0,
+        "max_positions": 7,
+        "trade_size": 40.0,
+        "sentiment_threshold": 7
+      },
+      "performance": {
+        "win_rate": 1.0,
+        "avg_profit": 1.2994219269407865,
+        "avg_loss": 0,
+        "profit_factor": 0
+      }
+    },
+    {
+      "version": "1.0.9",
+      "date": "2026-03-25T12:23:49.851733",
+      "trigger": "做多7笔交易完成复盘",
+      "side": "long",
+      "changes": [
+        "做多胜率优秀(85.7%)，放宽止盈",
+        "做多盈亏比偏低(1.21)，优化止盈止损比"
+      ],
+      "params_before": {
+        "stop_loss": -3.0,
+        "take_profit": 15.0,
+        "max_positions": 7,
+        "trade_size": 40.0,
+        "sentiment_threshold": 7
+      },
+      "params_after": {
+        "stop_loss": -3.0,
+        "take_profit": 15.0,
+        "max_positions": 7,
+        "trade_size": 40.0,
+        "sentiment_threshold": 7
+      },
+      "performance": {
+        "win_rate": 0.8571428571428571,
+        "avg_profit": 1.9441250601057363,
+        "avg_loss": 1.6023306627822542,
+        "profit_factor": 1.213310776147788
+      }
+    },
+    {
+      "version": "1.0.10",
+      "date": "2026-03-25T12:26:35.908111",
+      "trigger": "做多7笔交易完成复盘",
+      "side": "long",
+      "changes": [
+        "做多胜率优秀(85.7%)，放宽止盈",
+        "做多盈亏比偏低(1.21)，优化止盈止损比"
+      ],
+      "params_before": {
+        "stop_loss": -3.0,
+        "take_profit": 15.0,
+        "max_positions": 7,
+        "trade_size": 40.0,
+        "sentiment_threshold": 7
+      },
+      "params_after": {
+        "stop_loss": -3.0,
+        "take_profit": 15.0,
+        "max_positions": 7,
+        "trade_size": 40.0,
+        "sentiment_threshold": 7
+      },
+      "performance": {
+        "win_rate": 0.8571428571428571,
+        "avg_profit": 1.9441250601057363,
+        "avg_loss": 1.6023306627822542,
+        "profit_factor": 1.213310776147788
+      }
+    },
+    {
+      "version": "1.0.11",
+      "date": "2026-03-25T12:29:22.100583",
+      "trigger": "做多7笔交易完成复盘",
+      "side": "long",
+      "changes": [
+        "做多胜率优秀(85.7%)，放宽止盈",
+        "做多盈亏比偏低(1.21)，优化止盈止损比"
+      ],
+      "params_before": {
+        "stop_loss": -3.0,
+        "take_profit": 15.0,
+        "max_positions": 7,
+        "trade_size": 40.0,
+        "sentiment_threshold": 7
+      },
+      "params_after": {
+        "stop_loss": -3.0,
+        "take_profit": 15.0,
+        "max_positions": 7,
+        "trade_size": 40.0,
+        "sentiment_threshold": 7
+      },
+      "performance": {
+        "win_rate": 0.8571428571428571,
+        "avg_profit": 1.9441250601057363,
+        "avg_loss": 1.6023306627822542,
+        "profit_factor": 1.213310776147788
+      }
+    },
+    {
+      "version": "1.0.12",
+      "date": "2026-03-25T12:31:45.779964",
+      "trigger": "做多8笔交易完成复盘",
+      "side": "long",
+      "changes": [
+        "做多胜率优秀(87.5%)，放宽止盈",
+        "做多盈亏比偏低(1.09)，优化止盈止损比"
+      ],
+      "params_before": {
+        "stop_loss": -3.0,
+        "take_profit": 15.0,
+        "max_positions": 7,
+        "trade_size": 40.0,
+        "sentiment_threshold": 7
+      },
+      "params_after": {
+        "stop_loss": -3.0,
+        "take_profit": 15.0,
+        "max_positions": 7,
+        "trade_size": 40.0,
+        "sentiment_threshold": 7
+      },
+      "performance": {
+        "win_rate": 0.875,
+        "avg_profit": 1.7454894503854852,
+        "avg_loss": 1.6023306627822542,
+        "profit_factor": 1.0893440978996514
+      }
+    },
+    {
+      "version": "1.0.13",
+      "date": "2026-03-25T12:34:21.999233",
+      "trigger": "做多8笔交易完成复盘",
+      "side": "long",
+      "changes": [
+        "做多胜率优秀(87.5%)，放宽止盈",
+        "做多盈亏比偏低(1.09)，优化止盈止损比"
+      ],
+      "params_before": {
+        "stop_loss": -3.0,
+        "take_profit": 15.0,
+        "max_positions": 7,
+        "trade_size": 40.0,
+        "sentiment_threshold": 7
+      },
+      "params_after": {
+        "stop_loss": -3.0,
+        "take_profit": 15.0,
+        "max_positions": 7,
+        "trade_size": 40.0,
+        "sentiment_threshold": 7
+      },
+      "performance": {
+        "win_rate": 0.875,
+        "avg_profit": 1.7454894503854852,
+        "avg_loss": 1.6023306627822542,
+        "profit_factor": 1.0893440978996514
+      }
+    },
+    {
+      "version": "1.0.14",
+      "date": "2026-03-25T12:37:05.128356",
+      "trigger": "做多8笔交易完成复盘",
+      "side": "long",
+      "changes": [
+        "做多胜率优秀(87.5%)，放宽止盈",
+        "做多盈亏比偏低(1.09)，优化止盈止损比"
+      ],
+      "params_before": {
+        "stop_loss": -3.0,
+        "take_profit": 15.0,
+        "max_positions": 7,
+        "trade_size": 40.0,
+        "sentiment_threshold": 7
+      },
+      "params_after": {
+        "stop_loss": -3.0,
+        "take_profit": 15.0,
+        "max_positions": 7,
+        "trade_size": 40.0,
+        "sentiment_threshold": 7
+      },
+      "performance": {
+        "win_rate": 0.875,
+        "avg_profit": 1.7454894503854852,
+        "avg_loss": 1.6023306627822542,
+        "profit_factor": 1.0893440978996514
+      }
+    },
+    {
+      "version": "1.0.15",
+      "date": "2026-03-25T12:39:29.801155",
+      "trigger": "做多8笔交易完成复盘",
+      "side": "long",
+      "changes": [
+        "做多胜率优秀(87.5%)，放宽止盈",
+        "做多盈亏比偏低(1.09)，优化止盈止损比"
+      ],
+      "params_before": {
+        "stop_loss": -3.0,
+        "take_profit": 15.0,
+        "max_positions": 7,
+        "trade_size": 40.0,
+        "sentiment_threshold": 7
+      },
+      "params_after": {
+        "stop_loss": -3.0,
+        "take_profit": 15.0,
+        "max_positions": 7,
+        "trade_size": 40.0,
+        "sentiment_threshold": 7
+      },
+      "performance": {
+        "win_rate": 0.875,
+        "avg_profit": 1.7454894503854852,
+        "avg_loss": 1.6023306627822542,
+        "profit_factor": 1.0893440978996514
+      }
+    },
+    {
+      "version": "1.0.16",
+      "date": "2026-03-25T12:41:57.042116",
+      "trigger": "做多8笔交易完成复盘",
+      "side": "long",
+      "changes": [
+        "做多胜率优秀(87.5%)，放宽止盈",
+        "做多盈亏比偏低(1.09)，优化止盈止损比"
+      ],
+      "params_before": {
+        "stop_loss": -3.0,
+        "take_profit": 15.0,
+        "max_positions": 7,
+        "trade_size": 40.0,
+        "sentiment_threshold": 7
+      },
+      "params_after": {
+        "stop_loss": -3.0,
+        "take_profit": 15.0,
+        "max_positions": 7,
+        "trade_size": 40.0,
+        "sentiment_threshold": 7
+      },
+      "performance": {
+        "win_rate": 0.875,
+        "avg_profit": 1.7454894503854852,
+        "avg_loss": 1.6023306627822542,
+        "profit_factor": 1.0893440978996514
+      }
+    },
+    {
+      "version": "1.0.17",
+      "date": "2026-03-25T12:44:39.507409",
+      "trigger": "做多8笔交易完成复盘",
+      "side": "long",
+      "changes": [
+        "做多胜率优秀(87.5%)，放宽止盈",
+        "做多盈亏比偏低(1.09)，优化止盈止损比"
+      ],
+      "params_before": {
+        "stop_loss": -3.0,
+        "take_profit": 15.0,
+        "max_positions": 7,
+        "trade_size": 40.0,
+        "sentiment_threshold": 7
+      },
+      "params_after": {
+        "stop_loss": -3.0,
+        "take_profit": 15.0,
+        "max_positions": 7,
+        "trade_size": 40.0,
+        "sentiment_threshold": 7
+      },
+      "performance": {
+        "win_rate": 0.875,
+        "avg_profit": 1.7454894503854852,
+        "avg_loss": 1.6023306627822542,
+        "profit_factor": 1.0893440978996514
+      }
+    },
+    {
+      "version": "1.0.18",
+      "date": "2026-03-25T12:47:47.123676",
+      "trigger": "做多8笔交易完成复盘",
+      "side": "long",
+      "changes": [
+        "做多胜率优秀(87.5%)，放宽止盈",
+        "做多盈亏比偏低(1.09)，优化止盈止损比"
+      ],
+      "params_before": {
+        "stop_loss": -3.0,
+        "take_profit": 15.0,
+        "max_positions": 7,
+        "trade_size": 40.0,
+        "sentiment_threshold": 7
+      },
+      "params_after": {
+        "stop_loss": -3.0,
+        "take_profit": 15.0,
+        "max_positions": 7,
+        "trade_size": 40.0,
+        "sentiment_threshold": 7
+      },
+      "performance": {
+        "win_rate": 0.875,
+        "avg_profit": 1.7454894503854852,
+        "avg_loss": 1.6023306627822542,
+        "profit_factor": 1.0893440978996514
+      }
+    },
+    {
+      "version": "1.0.19",
+      "date": "2026-03-25T12:50:09.931216",
+      "trigger": "做多8笔交易完成复盘",
+      "side": "long",
+      "changes": [
+        "做多胜率优秀(87.5%)，放宽止盈",
+        "做多盈亏比偏低(1.09)，优化止盈止损比"
+      ],
+      "params_before": {
+        "stop_loss": -3.0,
+        "take_profit": 15.0,
+        "max_positions": 7,
+        "trade_size": 40.0,
+        "sentiment_threshold": 7
+      },
+      "params_after": {
+        "stop_loss": -3.0,
+        "take_profit": 15.0,
+        "max_positions": 7,
+        "trade_size": 40.0,
+        "sentiment_threshold": 7
+      },
+      "performance": {
+        "win_rate": 0.875,
+        "avg_profit": 1.7454894503854852,
+        "avg_loss": 1.6023306627822542,
+        "profit_factor": 1.0893440978996514
+      }
+    },
+    {
+      "version": "1.0.20",
+      "date": "2026-03-25T12:52:34.259757",
+      "trigger": "做多8笔交易完成复盘",
+      "side": "long",
+      "changes": [
+        "做多胜率优秀(87.5%)，放宽止盈",
+        "做多盈亏比偏低(1.09)，优化止盈止损比"
+      ],
+      "params_before": {
+        "stop_loss": -3.0,
+        "take_profit": 15.0,
+        "max_positions": 7,
+        "trade_size": 40.0,
+        "sentiment_threshold": 7
+      },
+      "params_after": {
+        "stop_loss": -3.0,
+        "take_profit": 15.0,
+        "max_positions": 7,
+        "trade_size": 40.0,
+        "sentiment_threshold": 7
+      },
+      "performance": {
+        "win_rate": 0.875,
+        "avg_profit": 1.7454894503854852,
+        "avg_loss": 1.6023306627822542,
+        "profit_factor": 1.0893440978996514
+      }
+    },
+    {
+      "version": "1.0.21",
+      "date": "2026-03-25T12:55:31.495250",
+      "trigger": "做多8笔交易完成复盘",
+      "side": "long",
+      "changes": [
+        "做多胜率优秀(87.5%)，放宽止盈",
+        "做多盈亏比偏低(1.09)，优化止盈止损比"
+      ],
+      "params_before": {
+        "stop_loss": -3.0,
+        "take_profit": 15.0,
+        "max_positions": 7,
+        "trade_size": 40.0,
+        "sentiment_threshold": 7
+      },
+      "params_after": {
+        "stop_loss": -3.0,
+        "take_profit": 15.0,
+        "max_positions": 7,
+        "trade_size": 40.0,
+        "sentiment_threshold": 7
+      },
+      "performance": {
+        "win_rate": 0.875,
+        "avg_profit": 1.7454894503854852,
+        "avg_loss": 1.6023306627822542,
+        "profit_factor": 1.0893440978996514
+      }
+    },
+    {
+      "version": "1.0.22",
+      "date": "2026-03-25T12:58:46.818830",
+      "trigger": "做多8笔交易完成复盘",
+      "side": "long",
+      "changes": [
+        "做多胜率优秀(87.5%)，放宽止盈",
+        "做多盈亏比偏低(1.09)，优化止盈止损比"
+      ],
+      "params_before": {
+        "stop_loss": -3.0,
+        "take_profit": 15.0,
+        "max_positions": 7,
+        "trade_size": 40.0,
+        "sentiment_threshold": 7
+      },
+      "params_after": {
+        "stop_loss": -3.0,
+        "take_profit": 15.0,
+        "max_positions": 7,
+        "trade_size": 40.0,
+        "sentiment_threshold": 7
+      },
+      "performance": {
+        "win_rate": 0.875,
+        "avg_profit": 1.7454894503854852,
+        "avg_loss": 1.6023306627822542,
+        "profit_factor": 1.0893440978996514
+      }
+    },
+    {
+      "version": "1.0.23",
+      "date": "2026-03-25T13:01:10.206768",
+      "trigger": "做多8笔交易完成复盘",
+      "side": "long",
+      "changes": [
+        "做多胜率优秀(87.5%)，放宽止盈",
+        "做多盈亏比偏低(1.09)，优化止盈止损比"
+      ],
+      "params_before": {
+        "stop_loss": -3.0,
+        "take_profit": 15.0,
+        "max_positions": 7,
+        "trade_size": 40.0,
+        "sentiment_threshold": 7
+      },
+      "params_after": {
+        "stop_loss": -3.0,
+        "take_profit": 15.0,
+        "max_positions": 7,
+        "trade_size": 40.0,
+        "sentiment_threshold": 7
+      },
+      "performance": {
+        "win_rate": 0.875,
+        "avg_profit": 1.7454894503854852,
+        "avg_loss": 1.6023306627822542,
+        "profit_factor": 1.0893440978996514
+      }
+    },
+    {
+      "version": "1.0.24",
+      "date": "2026-03-25T13:03:50.585961",
+      "trigger": "做多8笔交易完成复盘",
+      "side": "long",
+      "changes": [
+        "做多胜率优秀(87.5%)，放宽止盈",
+        "做多盈亏比偏低(1.09)，优化止盈止损比"
+      ],
+      "params_before": {
+        "stop_loss": -3.0,
+        "take_profit": 15.0,
+        "max_positions": 7,
+        "trade_size": 40.0,
+        "sentiment_threshold": 7
+      },
+      "params_after": {
+        "stop_loss": -3.0,
+        "take_profit": 15.0,
+        "max_positions": 7,
+        "trade_size": 40.0,
+        "sentiment_threshold": 7
+      },
+      "performance": {
+        "win_rate": 0.875,
+        "avg_profit": 1.7454894503854852,
+        "avg_loss": 1.6023306627822542,
+        "profit_factor": 1.0893440978996514
+      }
+    },
+    {
+      "version": "1.0.25",
+      "date": "2026-03-25T13:06:18.210265",
+      "trigger": "做多8笔交易完成复盘",
+      "side": "long",
+      "changes": [
+        "做多胜率优秀(87.5%)，放宽止盈",
+        "做多盈亏比偏低(1.09)，优化止盈止损比"
+      ],
+      "params_before": {
+        "stop_loss": -3.0,
+        "take_profit": 15.0,
+        "max_positions": 7,
+        "trade_size": 40.0,
+        "sentiment_threshold": 7
+      },
+      "params_after": {
+        "stop_loss": -3.0,
+        "take_profit": 15.0,
+        "max_positions": 7,
+        "trade_size": 40.0,
+        "sentiment_threshold": 7
+      },
+      "performance": {
+        "win_rate": 0.875,
+        "avg_profit": 1.7454894503854852,
+        "avg_loss": 1.6023306627822542,
+        "profit_factor": 1.0893440978996514
+      }
+    },
+    {
+      "version": "1.0.26",
+      "date": "2026-03-25T13:09:34.937529",
+      "trigger": "做多8笔交易完成复盘",
+      "side": "long",
+      "changes": [
+        "做多胜率优秀(87.5%)，放宽止盈",
+        "做多盈亏比偏低(1.09)，优化止盈止损比"
+      ],
+      "params_before": {
+        "stop_loss": -3.0,
+        "take_profit": 15.0,
+        "max_positions": 7,
+        "trade_size": 40.0,
+        "sentiment_threshold": 7
+      },
+      "params_after": {
+        "stop_loss": -3.0,
+        "take_profit": 15.0,
+        "max_positions": 7,
+        "trade_size": 40.0,
+        "sentiment_threshold": 7
+      },
+      "performance": {
+        "win_rate": 0.875,
+        "avg_profit": 1.7454894503854852,
+        "avg_loss": 1.6023306627822542,
+        "profit_factor": 1.0893440978996514
+      }
+    },
+    {
+      "version": "1.0.27",
+      "date": "2026-03-25T13:12:27.507420",
+      "trigger": "做多8笔交易完成复盘",
+      "side": "long",
+      "changes": [
+        "做多胜率优秀(87.5%)，放宽止盈",
+        "做多盈亏比偏低(1.09)，优化止盈止损比"
+      ],
+      "params_before": {
+        "stop_loss": -3.0,
+        "take_profit": 15.0,
+        "max_positions": 7,
+        "trade_size": 40.0,
+        "sentiment_threshold": 7
+      },
+      "params_after": {
+        "stop_loss": -3.0,
+        "take_profit": 15.0,
+        "max_positions": 7,
+        "trade_size": 40.0,
+        "sentiment_threshold": 7
+      },
+      "performance": {
+        "win_rate": 0.875,
+        "avg_profit": 1.7454894503854852,
+        "avg_loss": 1.6023306627822542,
+        "profit_factor": 1.0893440978996514
+      }
+    },
+    {
+      "version": "1.0.28",
+      "date": "2026-03-25T13:14:51.601578",
+      "trigger": "做多8笔交易完成复盘",
+      "side": "long",
+      "changes": [
+        "做多胜率优秀(87.5%)，放宽止盈",
+        "做多盈亏比偏低(1.09)，优化止盈止损比"
+      ],
+      "params_before": {
+        "stop_loss": -3.0,
+        "take_profit": 15.0,
+        "max_positions": 7,
+        "trade_size": 40.0,
+        "sentiment_threshold": 7
+      },
+      "params_after": {
+        "stop_loss": -3.0,
+        "take_profit": 15.0,
+        "max_positions": 7,
+        "trade_size": 40.0,
+        "sentiment_threshold": 7
+      },
+      "performance": {
+        "win_rate": 0.875,
+        "avg_profit": 1.7454894503854852,
+        "avg_loss": 1.6023306627822542,
+        "profit_factor": 1.0893440978996514
+      }
+    },
+    {
+      "version": "1.0.29",
+      "date": "2026-03-25T13:17:18.014893",
+      "trigger": "做多8笔交易完成复盘",
+      "side": "long",
+      "changes": [
+        "做多胜率优秀(87.5%)，放宽止盈",
+        "做多盈亏比偏低(1.09)，优化止盈止损比"
+      ],
+      "params_before": {
+        "stop_loss": -3.0,
+        "take_profit": 15.0,
+        "max_positions": 7,
+        "trade_size": 40.0,
+        "sentiment_threshold": 7
+      },
+      "params_after": {
+        "stop_loss": -3.0,
+        "take_profit": 15.0,
+        "max_positions": 7,
+        "trade_size": 40.0,
+        "sentiment_threshold": 7
+      },
+      "performance": {
+        "win_rate": 0.875,
+        "avg_profit": 1.7454894503854852,
+        "avg_loss": 1.6023306627822542,
+        "profit_factor": 1.0893440978996514
+      }
+    },
+    {
+      "version": "1.0.30",
+      "date": "2026-03-25T13:19:41.379877",
+      "trigger": "做多8笔交易完成复盘",
+      "side": "long",
+      "changes": [
+        "做多胜率优秀(87.5%)，放宽止盈",
+        "做多盈亏比偏低(1.09)，优化止盈止损比"
+      ],
+      "params_before": {
+        "stop_loss": -3.0,
+        "take_profit": 15.0,
+        "max_positions": 7,
+        "trade_size": 40.0,
+        "sentiment_threshold": 7
+      },
+      "params_after": {
+        "stop_loss": -3.0,
+        "take_profit": 15.0,
+        "max_positions": 7,
+        "trade_size": 40.0,
+        "sentiment_threshold": 7
+      },
+      "performance": {
+        "win_rate": 0.875,
+        "avg_profit": 1.7454894503854852,
+        "avg_loss": 1.6023306627822542,
+        "profit_factor": 1.0893440978996514
+      }
+    },
+    {
+      "version": "1.0.31",
+      "date": "2026-03-25T13:22:06.450426",
+      "trigger": "做多8笔交易完成复盘",
+      "side": "long",
+      "changes": [
+        "做多胜率优秀(87.5%)，放宽止盈",
+        "做多盈亏比偏低(1.10)，优化止盈止损比"
+      ],
+      "params_before": {
+        "stop_loss": -3.0,
+        "take_profit": 15.0,
+        "max_positions": 7,
+        "trade_size": 40.0,
+        "sentiment_threshold": 7
+      },
+      "params_after": {
+        "stop_loss": -3.0,
+        "take_profit": 15.0,
+        "max_positions": 7,
+        "trade_size": 40.0,
+        "sentiment_threshold": 7
+      },
+      "performance": {
+        "win_rate": 0.875,
+        "avg_profit": 1.7640743094732436,
+        "avg_loss": 1.6023306627822542,
+        "profit_factor": 1.1009427395030569
+      }
+    },
+    {
+      "version": "1.0.32",
+      "date": "2026-03-25T13:24:26.471885",
+      "trigger": "做多8笔交易完成复盘",
+      "side": "long",
+      "changes": [
+        "做多胜率优秀(87.5%)，放宽止盈",
+        "做多盈亏比偏低(1.10)，优化止盈止损比"
+      ],
+      "params_before": {
+        "stop_loss": -3.0,
+        "take_profit": 15.0,
+        "max_positions": 7,
+        "trade_size": 40.0,
+        "sentiment_threshold": 7
+      },
+      "params_after": {
+        "stop_loss": -3.0,
+        "take_profit": 15.0,
+        "max_positions": 7,
+        "trade_size": 40.0,
+        "sentiment_threshold": 7
+      },
+      "performance": {
+        "win_rate": 0.875,
+        "avg_profit": 1.7640743094732436,
+        "avg_loss": 1.6023306627822542,
+        "profit_factor": 1.1009427395030569
+      }
+    },
+    {
+      "version": "1.0.33",
+      "date": "2026-03-25T13:27:07.967181",
+      "trigger": "做多8笔交易完成复盘",
+      "side": "long",
+      "changes": [
+        "做多胜率优秀(87.5%)，放宽止盈"
+      ],
+      "params_before": {
+        "stop_loss": -3.0,
+        "take_profit": 15.0,
+        "max_positions": 7,
+        "trade_size": 40.0,
+        "sentiment_threshold": 7
+      },
+      "params_after": {
+        "stop_loss": -3.0,
+        "take_profit": 15.0,
+        "max_positions": 7,
+        "trade_size": 40.0,
+        "sentiment_threshold": 7
+      },
+      "performance": {
+        "win_rate": 0.875,
+        "avg_profit": 2.700396569086242,
+        "avg_loss": 1.6023306627822542,
+        "profit_factor": 1.685292949706978
+      }
+    },
+    {
+      "version": "1.0.34",
+      "date": "2026-03-25T13:30:50.977830",
+      "trigger": "做多8笔交易完成复盘",
+      "side": "long",
+      "changes": [
+        "做多胜率优秀(87.5%)，放宽止盈"
+      ],
+      "params_before": {
+        "stop_loss": -3.0,
+        "take_profit": 15.0,
+        "max_positions": 7,
+        "trade_size": 40.0,
+        "sentiment_threshold": 7
+      },
+      "params_after": {
+        "stop_loss": -3.0,
+        "take_profit": 15.0,
+        "max_positions": 7,
+        "trade_size": 40.0,
+        "sentiment_threshold": 7
+      },
+      "performance": {
+        "win_rate": 0.875,
+        "avg_profit": 2.700396569086242,
+        "avg_loss": 1.6023306627822542,
+        "profit_factor": 1.685292949706978
+      }
+    },
+    {
+      "version": "1.0.35",
+      "date": "2026-03-25T13:33:14.167602",
+      "trigger": "做多8笔交易完成复盘",
+      "side": "long",
+      "changes": [
+        "做多胜率优秀(87.5%)，放宽止盈"
+      ],
+      "params_before": {
+        "stop_loss": -3.0,
+        "take_profit": 15.0,
+        "max_positions": 7,
+        "trade_size": 40.0,
+        "sentiment_threshold": 7
+      },
+      "params_after": {
+        "stop_loss": -3.0,
+        "take_profit": 15.0,
+        "max_positions": 7,
+        "trade_size": 40.0,
+        "sentiment_threshold": 7
+      },
+      "performance": {
+        "win_rate": 0.875,
+        "avg_profit": 2.700396569086242,
+        "avg_loss": 1.6023306627822542,
+        "profit_factor": 1.685292949706978
+      }
+    },
+    {
+      "version": "1.0.36",
+      "date": "2026-03-25T13:35:52.293835",
+      "trigger": "做多8笔交易完成复盘",
+      "side": "long",
+      "changes": [
+        "做多胜率优秀(87.5%)，放宽止盈"
+      ],
+      "params_before": {
+        "stop_loss": -3.0,
+        "take_profit": 15.0,
+        "max_positions": 7,
+        "trade_size": 40.0,
+        "sentiment_threshold": 7
+      },
+      "params_after": {
+        "stop_loss": -3.0,
+        "take_profit": 15.0,
+        "max_positions": 7,
+        "trade_size": 40.0,
+        "sentiment_threshold": 7
+      },
+      "performance": {
+        "win_rate": 0.875,
+        "avg_profit": 2.700396569086242,
+        "avg_loss": 1.6023306627822542,
+        "profit_factor": 1.685292949706978
+      }
+    },
+    {
+      "version": "1.0.37",
+      "date": "2026-03-25T13:43:43.381721",
+      "trigger": "做多8笔交易完成复盘",
+      "side": "long",
+      "changes": [
+        "做多胜率优秀(87.5%)，放宽止盈"
+      ],
+      "params_before": {
+        "stop_loss": -3.0,
+        "take_profit": 15.0,
+        "max_positions": 7,
+        "trade_size": 40.0,
+        "sentiment_threshold": 7
+      },
+      "params_after": {
+        "stop_loss": -3.0,
+        "take_profit": 15.0,
+        "max_positions": 7,
+        "trade_size": 40.0,
+        "sentiment_threshold": 7
+      },
+      "performance": {
+        "win_rate": 0.875,
+        "avg_profit": 2.700396569086242,
+        "avg_loss": 1.6023306627822542,
+        "profit_factor": 1.685292949706978
+      }
+    },
+    {
+      "version": "1.0.38",
+      "date": "2026-03-25T13:46:07.944391",
+      "trigger": "做多8笔交易完成复盘",
+      "side": "long",
+      "changes": [
+        "做多胜率优秀(87.5%)，放宽止盈"
+      ],
+      "params_before": {
+        "stop_loss": -3.0,
+        "take_profit": 15.0,
+        "max_positions": 7,
+        "trade_size": 40.0,
+        "sentiment_threshold": 7
+      },
+      "params_after": {
+        "stop_loss": -3.0,
+        "take_profit": 15.0,
+        "max_positions": 7,
+        "trade_size": 40.0,
+        "sentiment_threshold": 7
+      },
+      "performance": {
+        "win_rate": 0.875,
+        "avg_profit": 2.700396569086242,
+        "avg_loss": 1.6023306627822542,
+        "profit_factor": 1.685292949706978
+      }
+    },
+    {
+      "version": "1.0.39",
+      "date": "2026-03-25T13:49:01.817018",
+      "trigger": "做多8笔交易完成复盘",
+      "side": "long",
+      "changes": [
+        "做多胜率优秀(87.5%)，放宽止盈"
+      ],
+      "params_before": {
+        "stop_loss": -3.0,
+        "take_profit": 15.0,
+        "max_positions": 7,
+        "trade_size": 40.0,
+        "sentiment_threshold": 7
+      },
+      "params_after": {
+        "stop_loss": -3.0,
+        "take_profit": 15.0,
+        "max_positions": 7,
+        "trade_size": 40.0,
+        "sentiment_threshold": 7
+      },
+      "performance": {
+        "win_rate": 0.875,
+        "avg_profit": 2.700396569086242,
+        "avg_loss": 1.6023306627822542,
+        "profit_factor": 1.685292949706978
+      }
+    },
+    {
+      "version": "1.0.40",
+      "date": "2026-03-25T13:57:22.761340",
+      "trigger": "做多8笔交易完成复盘",
+      "side": "long",
+      "changes": [
+        "做多胜率优秀(87.5%)，放宽止盈"
+      ],
+      "params_before": {
+        "stop_loss": -3.0,
+        "take_profit": 15.0,
+        "max_positions": 7,
+        "trade_size": 40.0,
+        "sentiment_threshold": 7
+      },
+      "params_after": {
+        "stop_loss": -3.0,
+        "take_profit": 15.0,
+        "max_positions": 7,
+        "trade_size": 40.0,
+        "sentiment_threshold": 7
+      },
+      "performance": {
+        "win_rate": 0.875,
+        "avg_profit": 2.700396569086242,
+        "avg_loss": 1.6023306627822542,
+        "profit_factor": 1.685292949706978
+      }
+    },
+    {
+      "version": "1.0.41",
+      "date": "2026-03-25T14:31:03.461192",
+      "trigger": "做多8笔交易完成复盘",
+      "side": "long",
+      "changes": [
+        "做多胜率优秀(75.0%)，放宽止盈"
+      ],
+      "params_before": {
+        "stop_loss": -3.0,
+        "take_profit": 15.0,
+        "max_positions": 5,
+        "trade_size": 40.0,
+        "sentiment_threshold": 7
+      },
+      "params_after": {
+        "stop_loss": -3.0,
+        "take_profit": 15.0,
+        "max_positions": 6,
+        "trade_size": 40.0,
+        "sentiment_threshold": 7
+      },
+      "performance": {
+        "win_rate": 0.75,
+        "avg_profit": 2.948595391665465,
+        "avg_loss": 1.809779039702991,
+        "profit_factor": 1.6292571230957396
+      }
+    },
+    {
+      "version": "1.0.42",
+      "date": "2026-03-25T14:33:25.067600",
+      "trigger": "做多7笔交易完成复盘",
+      "side": "long",
+      "changes": [
+        "做多胜率优秀(71.4%)，放宽止盈"
+      ],
+      "params_before": {
+        "stop_loss": -3.0,
+        "take_profit": 15.0,
+        "max_positions": 6,
+        "trade_size": 40.0,
+        "sentiment_threshold": 7
+      },
+      "params_after": {
+        "stop_loss": -3.0,
+        "take_profit": 15.0,
+        "max_positions": 7,
+        "trade_size": 40.0,
+        "sentiment_threshold": 7
+      },
+      "performance": {
+        "win_rate": 0.7142857142857143,
+        "avg_profit": 3.318828012031621,
+        "avg_loss": 1.809779039702991,
+        "profit_factor": 1.8338305059474471
+      }
+    },
+    {
+      "version": "1.0.43",
+      "date": "2026-03-25T14:35:19.558105",
+      "trigger": "做多7笔交易完成复盘",
+      "side": "long",
+      "changes": [
+        "做多胜率优秀(71.4%)，放宽止盈"
+      ],
+      "params_before": {
+        "stop_loss": -3.0,
+        "take_profit": 15.0,
+        "max_positions": 5,
+        "trade_size": 40.0,
+        "sentiment_threshold": 7
+      },
+      "params_after": {
+        "stop_loss": -3.0,
+        "take_profit": 15.0,
+        "max_positions": 6,
+        "trade_size": 40.0,
+        "sentiment_threshold": 7
+      },
+      "performance": {
+        "win_rate": 0.7142857142857143,
+        "avg_profit": 3.318828012031621,
+        "avg_loss": 1.809779039702991,
+        "profit_factor": 1.8338305059474471
+      }
+    },
+    {
+      "version": "1.0.44",
+      "date": "2026-03-25T15:10:54.743407",
+      "trigger": "做多8笔交易完成复盘",
+      "side": "long",
+      "changes": [
+        "做多连续亏损3笔，暂停交易"
+      ],
+      "params_before": {
+        "stop_loss": -3.0,
+        "take_profit": 15.0,
+        "max_positions": 5,
+        "trade_size": 40.0,
+        "sentiment_threshold": 7
+      },
+      "params_after": {
+        "stop_loss": -3.0,
+        "take_profit": 15.0,
+        "max_positions": 5,
+        "trade_size": 40.0,
+        "sentiment_threshold": 8
+      },
+      "performance": {
+        "win_rate": 0.5,
+        "avg_profit": 4.112474846071876,
+        "avg_loss": 1.698969344430543,
+        "profit_factor": 2.4205703649410384
+      }
+    }
+  ],
+  "current_params": {
+    "long": {
+      "stop_loss": -3.0,
+      "take_profit": 15.0,
+      "max_positions": 10,
+      "trade_size": 40.0,
+      "sentiment_threshold": 7
+    },
+    "short": {
+      "stop_loss": -1.5,
+      "take_profit": 3.0,
+      "max_positions": 10,
+      "trade_size": 40.0,
+      "sentiment_threshold": 7
+    }
+  },
+  "performance": {
+    "total_trades": 8,
+    "wins": 4,
+    "losses": 4,
+    "consecutive_losses": 3,
+    "last_trade_time": "2026-03-25T15:10:54.743407",
+    "paused": true,
+    "pause_until": "2026-03-26T12:31:36.000000"
+  },
+  "long_performance": {
+    "total_trades": 8,
+    "wins": 4,
+    "losses": 4,
+    "consecutive_losses": 3,
+    "win_rate": 0.5,
+    "avg_profit": 4.112474846071876,
+    "avg_loss": 1.698969344430543,
+    "profit_factor": 2.4205703649410384
+  },
+  "short_performance": {
+    "total_trades": 0,
+    "wins": 0,
+    "losses": 0,
+    "consecutive_losses": 0,
+    "win_rate": 0.0,
+    "avg_profit": 0.0,
+    "avg_loss": 0.0,
+    "profit_factor": 0.0
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "stopped_out": [],
+  "manual_ban": [],
+  "stablecoins": [
+    "USDC",
+    "USDT",
+    "USDG",
+    "USDE",
+    "DAI",
+    "TUSD",
+    "PAXG",
+    "XAUT"
+  ],
+  "entries": {}
+}

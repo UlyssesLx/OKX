@@ -1,0 +1,16 @@
+{
+  "timezone_aware": true,
+  "timezone_adjusted_position": true,
+  "decreasing_buy_enabled": true,
+  "decreasing_buy_factors": [
+    1,
+    0.6,
+    0.35,
+    0.2
+  ],
+  "over_position_exemption_enabled": true,
+  "exemption_loss_high": 60,
+  "exemption_loss_medium": 45,
+  "exemption_profit": 30,
+  "dynamic_bands_enabled": true
+}

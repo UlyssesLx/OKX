@@ -1,0 +1,3 @@
+@echo off
+echo Starting Backend Server...
+python run.py

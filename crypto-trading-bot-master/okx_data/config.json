@@ -1,0 +1,7 @@
+{
+  "apiKey": "${OKX_API_KEY}",
+  "secretKey": "${OKX_SECRET_KEY}",
+  "passphrase": "${OKX_PASSPHRASE}",
+  "baseUrl": "https://www.okx.com",
+  "isSimulation": false
+}
