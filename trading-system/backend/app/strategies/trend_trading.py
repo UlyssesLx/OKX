@@ -3,7 +3,7 @@
 顺势而为，截断亏损，让利润奔跑
 """
 import asyncio
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields, asdict
 from typing import Dict, Any, Optional, List
 from datetime import datetime, timedelta, timezone
 from loguru import logger
@@ -93,7 +93,9 @@ class TrendTradingStrategy:
             try:
                 with open(self.log_file, "r", encoding="utf-8") as f:
                     data = json.load(f)
-                self.config = TrendStrategyConfig(**data.get("config", {}))
+                config_data = data.get("config", {})
+                config_data = {k: v for k, v in config_data.items() if not k.startswith("_")}
+                self.config = TrendStrategyConfig(**config_data)
                 self.positions = {k: TrendPosition(**v) for k, v in data.get("positions", {}).items()}
                 self.trades = [TrendTrade(**t) for t in data.get("trades", [])[-100:]]
                 self.daily_stats = data.get("daily_stats", self.daily_stats)
@@ -102,10 +104,20 @@ class TrendTradingStrategy:
             except Exception as e:
                 logger.error(f"加载趋势交易状态失败: {e}")
 
+    def _serialize_config(self) -> Dict[str, Any]:
+        result = {}
+        for f in fields(self.config):
+            value = getattr(self.config, f.name)
+            if isinstance(value, list):
+                result[f.name] = value
+            elif value is not None:
+                result[f.name] = value
+        return result
+
     def _save_state(self):
         try:
             data = {
-                "config": self.config.__dict__,
+                "config": self._serialize_config(),
                 "positions": {k: v.__dict__ for k, v in self.positions.items()},
                 "trades": [t.__dict__ for t in self.trades[-100:]],
                 "daily_stats": self.daily_stats,
@@ -322,7 +334,7 @@ class TrendTradingStrategy:
         return {
             "positions": {k: v.__dict__ for k, v in self.positions.items()},
             "daily_stats": self.daily_stats,
-            "config": self.config.__dict__,
+            "config": self._serialize_config(),
             "trade_count": len(self.trades)
         }
 

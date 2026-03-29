@@ -75,13 +75,16 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { DataBoard, Document, Coin } from '@element-plus/icons-vue'
 
 const sidewaysStatus = ref<Record<string, any>>({})
+const sidewaysEnabled = ref(true)
 let pollInterval: number | null = null
 
 async function fetchStatus() {
   try {
     const response = await fetch('/api/v1/services/sideways/status')
     if (response.ok) {
-      sidewaysStatus.value = await response.json()
+      const data = await response.json()
+      sidewaysEnabled.value = data.enabled ?? true
+      sidewaysStatus.value = data.details || {}
     }
   } catch (error) {
     console.error('Failed to fetch sideways status:', error)

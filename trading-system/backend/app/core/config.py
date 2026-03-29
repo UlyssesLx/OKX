@@ -62,6 +62,14 @@ class Settings(BaseSettings):
     FEISHU_CHAT_ID: str = ""
     FEISHU_NOTIFICATION_ENABLED: bool = True  # 是否启用飞书通知
 
+    # 情绪融合配置
+    SENTIMENT_FUSION_ENABLED: bool = False  # 是否启用情绪融合
+    SENTIMENT_FUSION_MODE: str = "free"  # 情绪融合模式
+
+    # LM Studio配置（AI策略迭代）
+    LM_STUDIO_URL: str = "http://10.10.6.15:1234"
+    LM_STUDIO_MODEL: str = "local-model"
+
     class Config:
         env_file = ".env"
         case_sensitive = True

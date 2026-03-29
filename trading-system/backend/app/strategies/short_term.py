@@ -298,29 +298,55 @@ def check_short_term_exit(
     config: ShortTermConfig,
     entry_price: float,
     current_price: float,
-    entry_time: datetime
+    entry_time: datetime,
+    trend_score: int = 5,
+    smart_stop_loss_enabled: bool = True,
+    stop_loss_trend_8_plus: float = 3.0,
+    stop_loss_trend_6_7: float = 2.0,
+    stop_loss_trend_default: float = 1.5,
+    dynamic_take_profit_enabled: bool = True,
+    take_profit_trend_9_10: float = 15.0,
+    take_profit_trend_7_8: float = 10.0,
+    take_profit_trend_5_6: float = 8.0,
+    take_profit_trend_default: float = 6.0
 ) -> ExitResult:
     pnl = ((current_price - entry_price) / entry_price) * 100
     hours_since_entry = (datetime.now() - entry_time).total_seconds() / 3600
 
-    if pnl <= config.stop_loss:
+    if smart_stop_loss_enabled:
+        if trend_score >= 8:
+            effective_stop_loss = -stop_loss_trend_8_plus
+        elif trend_score >= 6:
+            effective_stop_loss = -stop_loss_trend_6_7
+        else:
+            effective_stop_loss = -stop_loss_trend_default
+    else:
+        effective_stop_loss = config.stop_loss
+
+    if pnl <= effective_stop_loss:
         return ExitResult(
             should_exit=True,
             action="STOP_LOSS",
-            reason=f"亏损{pnl:.2f}%，触发止损"
+            reason=f"亏损{pnl:.2f}%，触发止损(趋势{trend_score}分)"
         )
 
-    if pnl >= config.take_profit_1:
-        if pnl >= config.take_profit_2:
-            return ExitResult(
-                should_exit=True,
-                action="TAKE_PROFIT_2",
-                reason=f"盈利{pnl:.2f}%，清仓"
-            )
+    if dynamic_take_profit_enabled:
+        if trend_score >= 9:
+            effective_take_profit = take_profit_trend_9_10
+        elif trend_score >= 7:
+            effective_take_profit = take_profit_trend_7_8
+        elif trend_score >= 5:
+            effective_take_profit = take_profit_trend_5_6
+        else:
+            effective_take_profit = take_profit_trend_default
+    else:
+        effective_take_profit = config.take_profit_2
+
+    if pnl >= effective_take_profit:
         return ExitResult(
             should_exit=True,
-            action="TAKE_PROFIT_1",
-            reason=f"盈利{pnl:.2f}%，减仓50%"
+            action="TAKE_PROFIT",
+            reason=f"盈利{pnl:.2f}%，清仓(趋势{trend_score}分)"
         )
 
     if hours_since_entry >= config.time_stop:
@@ -337,41 +363,57 @@ def check_short_term_short_exit(
     config: ShortTermShortConfig,
     entry_price: float,
     current_price: float,
-    entry_time: datetime
+    entry_time: datetime,
+    trend_score: int = 5,
+    smart_stop_loss_enabled: bool = True,
+    stop_loss_trend_0_2: float = 3.0,
+    stop_loss_trend_3_4: float = 2.0,
+    stop_loss_trend_default: float = 1.5,
+    dynamic_take_profit_enabled: bool = True,
+    take_profit_trend_0_1: float = 15.0,
+    take_profit_trend_2_3: float = 10.0,
+    take_profit_trend_4: float = 8.0,
+    take_profit_trend_default: float = 6.0
 ) -> ExitResult:
-    """
-    做空退出检查（做多策略的镜像反向）
-
-    注意：
-    - 做空时：价格上涨=亏损，价格下跌=盈利
-    - PnL = (entry_price - current_price) / entry_price * 100
-    """
-    pnl = ((entry_price - current_price) / entry_price) * 100  # 价格下跌=盈利
+    pnl = ((entry_price - current_price) / entry_price) * 100
     hours_since_entry = (datetime.now() - entry_time).total_seconds() / 3600
 
-    # 止损：价格上涨1.5%（做空亏损）
-    if pnl <= config.stop_loss:
+    if smart_stop_loss_enabled:
+        if trend_score <= 2:
+            effective_stop_loss = -stop_loss_trend_0_2
+        elif trend_score <= 4:
+            effective_stop_loss = -stop_loss_trend_3_4
+        else:
+            effective_stop_loss = -stop_loss_trend_default
+    else:
+        effective_stop_loss = config.stop_loss
+
+    if pnl <= effective_stop_loss:
         return ExitResult(
             should_exit=True,
             action="STOP_LOSS",
-            reason=f"做空亏损{abs(pnl):.2f}%，触发止损"
+            reason=f"做空亏损{abs(pnl):.2f}%，触发止损(趋势{trend_score}分)"
         )
 
-    # 第一止盈：价格下跌1%（做空盈利）
-    if pnl >= config.take_profit_1:
-        if pnl >= config.take_profit_2:
-            return ExitResult(
-                should_exit=True,
-                action="TAKE_PROFIT_2",
-                reason=f"做空盈利{pnl:.2f}%，清仓"
-            )
+    if dynamic_take_profit_enabled:
+        if trend_score <= 1:
+            effective_take_profit = take_profit_trend_0_1
+        elif trend_score <= 3:
+            effective_take_profit = take_profit_trend_2_3
+        elif trend_score == 4:
+            effective_take_profit = take_profit_trend_4
+        else:
+            effective_take_profit = take_profit_trend_default
+    else:
+        effective_take_profit = config.take_profit_2
+
+    if pnl >= effective_take_profit:
         return ExitResult(
             should_exit=True,
-            action="TAKE_PROFIT_1",
-            reason=f"做空盈利{pnl:.2f}%，减仓50%"
+            action="TAKE_PROFIT",
+            reason=f"做空盈利{pnl:.2f}%，清仓(趋势{trend_score}分)"
         )
 
-    # 时间止损：48小时强制平仓
     if hours_since_entry >= config.time_stop:
         return ExitResult(
             should_exit=True,
@@ -649,6 +691,12 @@ class ShortTermTradingStrategy:
     async def check_and_exit_positions(self, client: OKXClient) -> List[Dict[str, Any]]:
         """检查并执行退出逻辑"""
         exits = []
+        
+        try:
+            from app.services.trading_engine import trading_engine
+            te_config = trading_engine.config
+        except ImportError:
+            te_config = None
 
         for coin, position in list(self.positions.items()):
             try:
@@ -658,12 +706,41 @@ class ShortTermTradingStrategy:
                     continue
 
                 current_price = float(ticker["data"][0]["last"])
-                exit_result = check_short_term_exit(
-                    self.config,
-                    position.entry_price,
-                    current_price,
-                    position.entry_time
-                )
+                
+                trend_score = 5
+                if te_config:
+                    try:
+                        from app.services.coordinator import coordinator
+                        trend_data = coordinator.get_trend_score(coin)
+                        if trend_data:
+                            trend_score = trend_data.get("score", 5)
+                    except Exception:
+                        pass
+                
+                if te_config:
+                    exit_result = check_short_term_exit(
+                        self.config,
+                        position.entry_price,
+                        current_price,
+                        position.entry_time,
+                        trend_score=trend_score,
+                        smart_stop_loss_enabled=te_config.long_smart_stop_loss_enabled,
+                        stop_loss_trend_8_plus=te_config.long_stop_loss_trend_8_plus,
+                        stop_loss_trend_6_7=te_config.long_stop_loss_trend_6_7,
+                        stop_loss_trend_default=te_config.long_stop_loss_trend_default,
+                        dynamic_take_profit_enabled=te_config.long_dynamic_take_profit_enabled,
+                        take_profit_trend_9_10=te_config.long_take_profit_trend_9_10,
+                        take_profit_trend_7_8=te_config.long_take_profit_trend_7_8,
+                        take_profit_trend_5_6=te_config.long_take_profit_trend_5_6,
+                        take_profit_trend_default=te_config.long_take_profit_trend_default
+                    )
+                else:
+                    exit_result = check_short_term_exit(
+                        self.config,
+                        position.entry_price,
+                        current_price,
+                        position.entry_time
+                    )
 
                 if exit_result.should_exit:
                     action = exit_result.action

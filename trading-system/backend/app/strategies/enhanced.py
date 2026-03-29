@@ -359,9 +359,22 @@ class SidewaysManager:
             return self.status[coin].get("periods", 0) >= self.config.min_periods
         return False
     
-    def reset(self, coin: str):
+    async def reset(self, coin: str):
         if coin in self.status:
             del self.status[coin]
+            await self._save_status()
+    
+    async def reset_all(self):
+        self.status.clear()
+        await self._save_status()
+    
+    @property
+    def status_summary(self) -> Dict:
+        return {
+            "enabled": self.config.enabled,
+            "paused_coins": list(self.status.keys()),
+            "details": self.status
+        }
 
 
 async def check_crash_rebound(

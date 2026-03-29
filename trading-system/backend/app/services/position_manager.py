@@ -430,38 +430,39 @@ class PositionManager:
             from app.services.trading_engine import trading_engine
             config = trading_engine.config
 
-            if not config.tiered_take_profit_enabled:
-                return None
-
             pos = self.positions[coin]
             pnl_percent = (current_price - pos.entry_price) / pos.entry_price * 100
 
-            # 检查第三层止盈（15%）
-            if pnl_percent >= config.take_profit_tier3_percent:
+            # 使用做多分层减仓止盈配置（long_band_trade）
+            if not config.long_band_trade_enabled:
+                return None
+
+            # 最终止盈（6%）
+            if pnl_percent >= config.long_band_trade_final_reduce_at:
                 return {
                     "action": "sell",
-                    "reason": f"第三层止盈：盈利{pnl_percent:.2f}% >= {config.take_profit_tier3_percent}%",
-                    "sell_percent": config.take_profit_tier3_ratio * 100,
+                    "reason": f"最终止盈：盈利{pnl_percent:.2f}% >= {config.long_band_trade_final_reduce_at}%",
+                    "sell_percent": 100.0,
                     "tier": 3,
                     "pnl_percent": pnl_percent
                 }
 
-            # 检查第二层止盈（10%）
-            elif pnl_percent >= config.take_profit_tier2_percent:
+            # 第二层止盈（3%）
+            elif pnl_percent >= config.long_band_trade_second_reduce_at:
                 return {
                     "action": "sell",
-                    "reason": f"第二层止盈：盈利{pnl_percent:.2f}% >= {config.take_profit_tier2_percent}%",
-                    "sell_percent": config.take_profit_tier2_ratio * 100,
+                    "reason": f"第二层止盈：盈利{pnl_percent:.2f}% >= {config.long_band_trade_second_reduce_at}%",
+                    "sell_percent": config.long_band_trade_second_reduce_percent,
                     "tier": 2,
                     "pnl_percent": pnl_percent
                 }
 
-            # 检查第一层止盈（5%）
-            elif pnl_percent >= config.take_profit_tier1_percent:
+            # 第一层止盈（1.5%）
+            elif pnl_percent >= config.long_band_trade_reduce_at:
                 return {
                     "action": "sell",
-                    "reason": f"第一层止盈：盈利{pnl_percent:.2f}% >= {config.take_profit_tier1_percent}%",
-                    "sell_percent": config.take_profit_tier1_ratio * 100,
+                    "reason": f"第一层止盈：盈利{pnl_percent:.2f}% >= {config.long_band_trade_reduce_at}%",
+                    "sell_percent": config.long_band_trade_reduce_percent,
                     "tier": 1,
                     "pnl_percent": pnl_percent
                 }

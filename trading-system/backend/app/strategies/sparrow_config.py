@@ -67,8 +67,9 @@ class DailyControlConfig(BaseModel):
 
 
 class CheckIntervalConfig(BaseModel):
-    active: int
-    quiet: int
+    active: int = 5
+    quiet: int = 15
+    fixed: int = 10  # 固定检查间隔
 
 
 class BuyConditionsConfig(BaseModel):
@@ -246,7 +247,8 @@ def get_default_config() -> SparrowConfig:
         ),
         check_interval=CheckIntervalConfig(
             active=2,
-            quiet=5
+            quiet=5,
+            fixed=10
         ),
         resonance_weights=ResonanceWeights(
             sentiment=0.30,

@@ -26,6 +26,10 @@ from app.services.blacklist_manager import blacklist_manager
 from app.services.trade_stats import trade_stats, TradeRecord
 from app.services.simulation_manager import simulation_manager
 from app.services.notification_agent import feishu_notifier
+from app.services.sentiment_service import sentiment_service
+from app.services.signal_dedup import signal_dedup, SignalType, DedupStatus
+from app.core.logger import TradingLogger, log_execution_time
+from app.services.strategy_evolution import strategy_evolution
 
 
 @dataclass
@@ -61,15 +65,6 @@ class TradingConfig:
     trend_weak_threshold: int = 3  # 趋势转弱阈值（<=此值卖出）
     sideways_min_score: int = 3  # 横盘趋势评分下限
     sideways_max_score: int = 5  # 横盘趋势评分上限
-
-    # 波段操作配置
-    band_trade_enabled: bool = True  # 启用波段操作
-    band_trade_reduce_at: float = 1.5  # 涨1.5%减仓30%
-    band_trade_second_reduce_at: float = 3.0  # 涨3%再减仓50%
-    band_trade_final_reduce_at: float = 6.0  # 涨6%止盈剩余
-    band_trade_reduce_percent: float = 30.0  # 首次减仓30%
-    band_trade_second_reduce_percent: float = 50.0  # 二次减仓50%
-    band_trade_buy_back_at: float = -2.0  # 跌2%买回（趋势≥6分）
 
     # 分层冷却期配置
     tiered_cooldown_enabled: bool = True  # 启用分层冷却期
@@ -346,15 +341,6 @@ class TradingConfig:
     min_take_profit: float = 2.0  # 最小止盈
     time_decay_max_stop: float = -8.0  # 时间衰减最大止损限制
 
-    # 分批止盈配置（波段操作，来自crypto-trading-bot-master）
-    tiered_take_profit_enabled: bool = True  # 启用分批止盈
-    take_profit_tier1_percent: float = 1.5  # 第一层止盈百分比（1.5%）
-    take_profit_tier1_ratio: float = 0.3  # 第一层卖出比例（30%）
-    take_profit_tier2_percent: float = 3.0  # 第二层止盈百分比（3%）
-    take_profit_tier2_ratio: float = 0.5  # 第二层卖出比例（50%）
-    take_profit_tier3_percent: float = 6.0  # 第三层止盈百分比（6%）
-    take_profit_tier3_ratio: float = 1.0  # 第三层卖出比例（清仓）
-
     # 舆情触发交易配置（来自crypto-trading-bot-master）
     sentiment_trigger_enabled: bool = True  # 启用舆情触发交易
     sentiment_buy_threshold: int = 7  # 舆情买入阈值（与sentiment_threshold一致）
@@ -376,18 +362,22 @@ class TradingConfig:
     check_interval_low_intensity: int = 5  # 低强度检查频率（分钟）
     check_intensity_threshold: int = 4  # 强度阈值
 
-    # 共振分析配置
-    min_capital_flow_score: int = 5  # 资金流向最低评分
-    technical_min_pass_count: int = 2  # 技术面验证最少通过项数（2/5）
-    technical_min_score: int = 5  # 技术面最低评分
+    # 共振分析配置 - 对齐 ai_trading_bot.js
+    min_capital_flow_score: int = 4  # 资金流向最低评分（对齐 ai_trading_bot.js: capitalFlow.score >= 4）
+    resonance_min_total_score: int = 6  # 共振总分门槛
+    resonance_sentiment_weight: float = 0.30  # 舆情评分权重 30%
+    resonance_technical_weight: float = 0.25  # 技术面权重 25%
+    resonance_capital_flow_weight: float = 0.25  # 资金流向权重 25%
+    resonance_market_env_weight: float = 0.20  # 大盘环境权重 20%
     
-    # 技术面验证参数配置
+    # 技术面验证参数配置 - 共振策略专用
     technical_validation_enabled: bool = True  # 启用技术面验证
+    technical_min_pass_count: int = 2  # 技术面验证最少通过项数（2/5）
     technical_trend_score_threshold: int = 5  # 趋势评分阈值
-    technical_rsi_min: float = 30.0  # RSI下限
-    technical_rsi_max: float = 80.0  # RSI上限
+    technical_rsi_min: float = 30.0  # RSI 下限
+    technical_rsi_max: float = 80.0  # RSI 上限
     technical_volume_ratio_min: float = 0.8  # 量比最小值
-    technical_ma5_tolerance: float = 0.98  # MA5容差
+    technical_ma5_tolerance: float = 0.98  # MA5 容差
     technical_volatility_min: float = 0.2  # 波动率最小值
 
     # 日交易量限制
@@ -409,12 +399,6 @@ class TradingConfig:
     sentiment_high_score_threshold: int = 8  # 高分阈值
     price_drop_threshold: float = -5.0  # 价格下跌阈值
     sentiment_adjustment: int = -2  # 评分调整幅度
-
-    # 小盈减仓 - 盈利≥止盈线50%且仓位>15%
-    small_profit_reduce_enabled: bool = True  # 启用小盈减仓
-    small_profit_reduce_threshold_percent: float = 50.0  # 止盈线百分比阈值（50%）
-    small_profit_reduce_position_threshold: float = 15.0  # 仓位占比阈值（15%）
-    small_profit_reduce_ratio: float = 50.0  # 减仓比例（50%）
 
     # 超仓减仓 - 仓位>30%强制减仓
     over_position_reduce_enabled: bool = True  # 启用超仓减仓
@@ -439,6 +423,76 @@ class TradingConfig:
     # 止损后重置金字塔层级
     reset_pyramid_on_stop_loss: bool = True  # 止损后重置金字塔层级
 
+    # ========== 多空分别的止盈止损配置 ==========
+    # 做多智能止损（趋势档位）
+    long_smart_stop_loss_enabled: bool = True  # 启用做多智能止损
+    long_stop_loss_trend_8_plus: float = -3.0  # 趋势≥8分止损
+    long_stop_loss_trend_6_7: float = -2.0  # 趋势6-7分止损
+    long_stop_loss_trend_default: float = -1.5  # 默认止损
+
+    # 做多动态止盈（趋势档位）
+    long_dynamic_take_profit_enabled: bool = True  # 启用做多动态止盈
+    long_take_profit_trend_9_10: float = 15.0  # 趋势9-10分止盈
+    long_take_profit_trend_7_8: float = 10.0  # 趋势7-8分止盈
+    long_take_profit_trend_5_6: float = 8.0  # 趋势5-6分止盈
+    long_take_profit_trend_default: float = 6.0  # 默认止盈
+
+    # 做多分层减仓止盈（波段操作）
+    long_band_trade_enabled: bool = True  # 启用做多分层减仓
+    long_band_trade_reduce_at: float = 1.5  # 第一档减仓点
+    long_band_trade_reduce_percent: float = 30.0  # 第一档减仓比例
+    long_band_trade_second_reduce_at: float = 3.0  # 第二档减仓点
+    long_band_trade_second_reduce_percent: float = 50.0  # 第二档减仓比例
+    long_band_trade_final_reduce_at: float = 6.0  # 最终止盈点
+
+    # 做多小盈减仓
+    long_small_profit_reduce_enabled: bool = True  # 启用做多小盈减仓
+    long_small_profit_reduce_threshold_percent: float = 50.0  # 止盈线百分比
+    long_small_profit_reduce_position_threshold: float = 15.0  # 仓位阈值
+    long_small_profit_reduce_ratio: float = 50.0  # 减仓比例
+
+    # 做多止盈限价单
+    long_take_profit_limit_order_enabled: bool = True  # 启用做多止盈限价单
+    long_take_profit_order_partial: float = 0.5  # 止盈仓位比例
+
+    # 做空智能止损（趋势档位）
+    short_smart_stop_loss_enabled: bool = True  # 启用做空智能止损
+    short_stop_loss_trend_0_2: float = -3.0  # 趋势0-2分止损（强下跌趋势放宽止损）
+    short_stop_loss_trend_3_4: float = -2.0  # 趋势3-4分止损
+    short_stop_loss_trend_default: float = -1.5  # 默认止损
+
+    # 做空动态止盈（趋势档位）
+    short_dynamic_take_profit_enabled: bool = True  # 启用做空动态止盈
+    short_take_profit_trend_0_1: float = 15.0  # 趋势0-1分止盈（强下跌）
+    short_take_profit_trend_2_3: float = 10.0  # 趋势2-3分止盈
+    short_take_profit_trend_4: float = 8.0  # 趋势4分止盈
+    short_take_profit_trend_default: float = 6.0  # 默认止盈
+
+    # 做空分层减仓止盈（波段操作）
+    short_band_trade_enabled: bool = True  # 启用做空分层减仓
+    short_band_trade_reduce_at: float = 1.5  # 第一档减仓点
+    short_band_trade_reduce_percent: float = 30.0  # 第一档减仓比例
+    short_band_trade_second_reduce_at: float = 3.0  # 第二档减仓点
+    short_band_trade_second_reduce_percent: float = 50.0  # 第二档减仓比例
+    short_band_trade_final_reduce_at: float = 6.0  # 最终止盈点
+
+    # 做空小盈减仓
+    short_small_profit_reduce_enabled: bool = True  # 启用做空小盈减仓
+    short_small_profit_reduce_threshold_percent: float = 50.0  # 止盈线百分比
+    short_small_profit_reduce_position_threshold: float = 15.0  # 仓位阈值
+    short_small_profit_reduce_ratio: float = 50.0  # 减仓比例
+
+    # 做空止盈限价单
+    short_take_profit_limit_order_enabled: bool = True  # 启用做空止盈限价单
+    short_take_profit_order_partial: float = 0.5  # 止盈仓位比例
+
+    # ========== AI策略迭代配置 ==========
+    ai_evolution_enabled: bool = False  # 启用AI策略迭代
+    ai_evolution_auto_apply: bool = False  # 自动应用AI建议
+    ai_evolution_min_trades: int = 10  # 最少交易数才触发AI分析
+    ai_evolution_interval_hours: int = 24  # AI分析间隔（小时）
+    ai_evolution_confidence_threshold: float = 0.7  # AI建议置信度阈值
+
     # 做空开关
     enable_short: bool = True  # 是否启用做空
 
@@ -459,47 +513,21 @@ class TradingConfig:
     smart_pyramid_min_trend_score: int = 6  # 金字塔补仓最低趋势评分
     smart_pyramid_min_cash: float = 15.0  # 金字塔补仓最低资金
 
-    # 智能止损配置（趋势档位）
-    smart_stop_loss_enabled: bool = True  # 启用智能止损
-    stop_loss_trend_8_plus: float = -3.0  # 趋势≥8分止损
-    stop_loss_trend_6_7: float = -2.0  # 趋势6-7分止损
-    stop_loss_trend_default: float = -1.5  # 默认止损
-    stop_loss_score_tier1: int = 8  # 止损第一档评分阈值
-    stop_loss_score_tier2: int = 6  # 止损第二档评分阈值
-    stop_loss_time_protection_enabled: bool = True  # 启用持仓时间保护
-    stop_loss_time_protection_minutes: int = 60  # 时间保护分钟数（60分钟）
-
-    # 动态止盈配置（趋势档位）
-    dynamic_take_profit_enabled: bool = True  # 启用动态止盈
-    take_profit_trend_9_10: float = 15.0  # 趋势9-10分止盈
-    take_profit_trend_7_8: float = 10.0  # 趋势7-8分止盈
-    take_profit_trend_5_6: float = 8.0  # 趋势5-6分止盈
-    take_profit_trend_default: float = 6.0  # 默认止盈
-    take_profit_score_tier1: int = 9  # 止盈第一档评分阈值
-    take_profit_score_tier2: int = 7  # 止盈第二档评分阈值
-    take_profit_score_tier3: int = 5  # 止盈第三档评分阈值
-    partial_take_profit_percent: float = 0.5  # 部分止盈比例
-
-    # 时间衰减止损
-    time_decay_enabled: bool = True  # 启用时间衰减
-    time_decay_factor: float = 0.1  # 每小时收紧因子
-
-    # 小盈减仓
-    small_profit_reduce_enabled: bool = True  # 启用小盈减仓
-    small_profit_reduce_threshold_percent: float = 50.0  # 止盈线百分比
-    small_profit_reduce_position_threshold: float = 15.0  # 仓位阈值
-
     # 飞书通知配置
     feishu_notification_enabled: bool = False  # 启用飞书通知
     feishu_chat_id: str = ""  # 飞书群组ID（可选，App ID/Secret 从环境变量读取）
 
-    # 波段操作
-    band_trade_enabled: bool = True  # 启用波段操作
-    band_trade_reduce_at: float = 1.5  # 第一层止盈点
-    band_trade_second_reduce_at: float = 3.0  # 第二层止盈点
-    band_trade_final_reduce_at: float = 6.0  # 最终止盈点
-    band_trade_reduce_percent: float = 30.0  # 首次减仓比例
-    band_trade_second_reduce_percent: float = 50.0  # 二次减仓比例
+    # 情绪融合配置 - 对齐 ai_trading_bot.js
+    sentiment_fusion_enabled: bool = False  # 启用情绪融合（推荐使用免费方案）
+    sentiment_fusion_mode: str = "free"  # 模式: "free"(CoinGecko+Fear&Greed) 或 "news"(CoinGecko+新闻)
+    sentiment_coingecko_weight: float = 0.3  # CoinGecko情绪权重（30%）
+    sentiment_fear_greed_weight: float = 0.3  # Fear & Greed权重（30%，免费）
+    sentiment_news_weight: float = 0.2  # 新闻情绪权重（20%，可选）
+    sentiment_technical_weight: float = 0.4  # 技术面权重（40%）
+    sentiment_cache_duration: int = 300  # 情绪数据缓存时间（秒，5分钟）
+    sentiment_bearish_alert_threshold: int = 3  # 极度看跌阈值（<=3分警告）
+    sentiment_fetch_timeout: float = 5.0  # 获取情绪数据超时（秒）
+    sentiment_fallback_on_error: bool = True  # 获取失败时使用纯技术面评分
 
     def __post_init__(self):
         if not hasattr(self, 'decreasing_buy_factors') or self.decreasing_buy_factors is None:
@@ -661,34 +689,31 @@ class TradingEngine:
                     self.config.exemption_loss_high_minutes = smart_config.get("exemption_loss_high_minutes", self.config.exemption_loss_high_minutes)
                     self.config.exemption_loss_medium_minutes = smart_config.get("exemption_loss_medium_minutes", self.config.exemption_loss_medium_minutes)
                     self.config.exemption_profit_minutes = smart_config.get("exemption_profit_minutes", self.config.exemption_profit_minutes)
-                    # 智能止损配置
-                    self.config.smart_stop_loss_enabled = smart_config.get("smart_stop_loss_enabled", self.config.smart_stop_loss_enabled)
-                    self.config.stop_loss_trend_8_plus = smart_config.get("stop_loss_trend_8_plus", self.config.stop_loss_trend_8_plus)
-                    self.config.stop_loss_trend_6_7 = smart_config.get("stop_loss_trend_6_7", self.config.stop_loss_trend_6_7)
-                    self.config.stop_loss_trend_default = smart_config.get("stop_loss_trend_default", self.config.stop_loss_trend_default)
-                    self.config.stop_loss_time_protection_enabled = smart_config.get("stop_loss_time_protection_enabled", self.config.stop_loss_time_protection_enabled)
-                    self.config.stop_loss_time_protection_minutes = smart_config.get("stop_loss_time_protection_minutes", self.config.stop_loss_time_protection_minutes)
-                    # 动态止盈配置
-                    self.config.dynamic_take_profit_enabled = smart_config.get("dynamic_take_profit_enabled", self.config.dynamic_take_profit_enabled)
-                    self.config.take_profit_trend_9_10 = smart_config.get("take_profit_trend_9_10", self.config.take_profit_trend_9_10)
-                    self.config.take_profit_trend_7_8 = smart_config.get("take_profit_trend_7_8", self.config.take_profit_trend_7_8)
-                    self.config.take_profit_trend_5_6 = smart_config.get("take_profit_trend_5_6", self.config.take_profit_trend_5_6)
-                    self.config.take_profit_trend_default = smart_config.get("take_profit_trend_default", self.config.take_profit_trend_default)
-                    self.config.partial_take_profit_percent = smart_config.get("partial_take_profit_percent", self.config.partial_take_profit_percent)
+                    # 做多智能止损配置（新字段）
+                    self.config.long_smart_stop_loss_enabled = smart_config.get("long_smart_stop_loss_enabled", smart_config.get("smart_stop_loss_enabled", self.config.long_smart_stop_loss_enabled))
+                    self.config.long_stop_loss_trend_8_plus = smart_config.get("long_stop_loss_trend_8_plus", smart_config.get("stop_loss_trend_8_plus", self.config.long_stop_loss_trend_8_plus))
+                    self.config.long_stop_loss_trend_6_7 = smart_config.get("long_stop_loss_trend_6_7", smart_config.get("stop_loss_trend_6_7", self.config.long_stop_loss_trend_6_7))
+                    self.config.long_stop_loss_trend_default = smart_config.get("long_stop_loss_trend_default", smart_config.get("stop_loss_trend_default", self.config.long_stop_loss_trend_default))
+                    # 做多动态止盈配置（新字段）
+                    self.config.long_dynamic_take_profit_enabled = smart_config.get("long_dynamic_take_profit_enabled", smart_config.get("dynamic_take_profit_enabled", self.config.long_dynamic_take_profit_enabled))
+                    self.config.long_take_profit_trend_9_10 = smart_config.get("long_take_profit_trend_9_10", smart_config.get("take_profit_trend_9_10", self.config.long_take_profit_trend_9_10))
+                    self.config.long_take_profit_trend_7_8 = smart_config.get("long_take_profit_trend_7_8", smart_config.get("take_profit_trend_7_8", self.config.long_take_profit_trend_7_8))
+                    self.config.long_take_profit_trend_5_6 = smart_config.get("long_take_profit_trend_5_6", smart_config.get("take_profit_trend_5_6", self.config.long_take_profit_trend_5_6))
+                    self.config.long_take_profit_trend_default = smart_config.get("long_take_profit_trend_default", smart_config.get("take_profit_trend_default", self.config.long_take_profit_trend_default))
                     # 时间衰减止损
                     self.config.time_decay_enabled = smart_config.get("time_decay_enabled", self.config.time_decay_enabled)
                     self.config.time_decay_factor = smart_config.get("time_decay_factor", self.config.time_decay_factor)
-                    # 小盈减仓
-                    self.config.small_profit_reduce_enabled = smart_config.get("small_profit_reduce_enabled", self.config.small_profit_reduce_enabled)
-                    self.config.small_profit_reduce_threshold_percent = smart_config.get("small_profit_reduce_threshold_percent", self.config.small_profit_reduce_threshold_percent)
-                    self.config.small_profit_reduce_position_threshold = smart_config.get("small_profit_reduce_position_threshold", self.config.small_profit_reduce_position_threshold)
-                    # 波段操作
-                    self.config.band_trade_enabled = smart_config.get("band_trade_enabled", self.config.band_trade_enabled)
-                    self.config.band_trade_reduce_at = smart_config.get("band_trade_reduce_at", self.config.band_trade_reduce_at)
-                    self.config.band_trade_second_reduce_at = smart_config.get("band_trade_second_reduce_at", self.config.band_trade_second_reduce_at)
-                    self.config.band_trade_final_reduce_at = smart_config.get("band_trade_final_reduce_at", self.config.band_trade_final_reduce_at)
-                    self.config.band_trade_reduce_percent = smart_config.get("band_trade_reduce_percent", self.config.band_trade_reduce_percent)
-                    self.config.band_trade_second_reduce_percent = smart_config.get("band_trade_second_reduce_percent", self.config.band_trade_second_reduce_percent)
+                    # 做多小盈减仓（新字段）
+                    self.config.long_small_profit_reduce_enabled = smart_config.get("long_small_profit_reduce_enabled", smart_config.get("small_profit_reduce_enabled", self.config.long_small_profit_reduce_enabled))
+                    self.config.long_small_profit_reduce_threshold_percent = smart_config.get("long_small_profit_reduce_threshold_percent", smart_config.get("small_profit_reduce_threshold_percent", self.config.long_small_profit_reduce_threshold_percent))
+                    self.config.long_small_profit_reduce_position_threshold = smart_config.get("long_small_profit_reduce_position_threshold", smart_config.get("small_profit_reduce_position_threshold", self.config.long_small_profit_reduce_position_threshold))
+                    # 做多分层减仓止盈（新字段）
+                    self.config.long_band_trade_enabled = smart_config.get("long_band_trade_enabled", smart_config.get("band_trade_enabled", self.config.long_band_trade_enabled))
+                    self.config.long_band_trade_reduce_at = smart_config.get("long_band_trade_reduce_at", smart_config.get("band_trade_reduce_at", self.config.long_band_trade_reduce_at))
+                    self.config.long_band_trade_second_reduce_at = smart_config.get("long_band_trade_second_reduce_at", smart_config.get("band_trade_second_reduce_at", self.config.long_band_trade_second_reduce_at))
+                    self.config.long_band_trade_final_reduce_at = smart_config.get("long_band_trade_final_reduce_at", smart_config.get("band_trade_final_reduce_at", self.config.long_band_trade_final_reduce_at))
+                    self.config.long_band_trade_reduce_percent = smart_config.get("long_band_trade_reduce_percent", smart_config.get("band_trade_reduce_percent", self.config.long_band_trade_reduce_percent))
+                    self.config.long_band_trade_second_reduce_percent = smart_config.get("long_band_trade_second_reduce_percent", smart_config.get("band_trade_second_reduce_percent", self.config.long_band_trade_second_reduce_percent))
                     # 技术面验证配置
                     self.config.technical_validation_enabled = smart_config.get("technical_validation_enabled", self.config.technical_validation_enabled)
                     self.config.technical_min_pass_count = smart_config.get("technical_min_pass_count", self.config.technical_min_pass_count)
@@ -698,6 +723,9 @@ class TradingEngine:
                     self.config.technical_volume_ratio_min = smart_config.get("technical_volume_ratio_min", self.config.technical_volume_ratio_min)
                     self.config.technical_ma5_tolerance = smart_config.get("technical_ma5_tolerance", self.config.technical_ma5_tolerance)
                     self.config.technical_volatility_min = smart_config.get("technical_volatility_min", self.config.technical_volatility_min)
+                    # 情绪融合配置
+                    self.config.sentiment_fusion_enabled = smart_config.get("sentiment_fusion_enabled", self.config.sentiment_fusion_enabled)
+                    self.config.sentiment_fusion_mode = smart_config.get("sentiment_fusion_mode", self.config.sentiment_fusion_mode)
 
             # 加载多单配置
             long_config_file = Path("data/long_config.json")
@@ -778,6 +806,26 @@ class TradingEngine:
                         
         except Exception as e:
             logger.error(f"加载保存的配置失败: {e}")
+        
+        # 同步策略迭代参数（仅作为参考，不覆盖用户配置）
+        self._log_evolution_params()
+    
+    def _log_evolution_params(self):
+        """记录策略迭代参数（仅作为参考，不覆盖用户配置）"""
+        try:
+            params = strategy_evolution.get_current_params()
+            
+            # 只记录迭代参数，不覆盖用户配置
+            long_params = params.long
+            short_params = params.short
+            
+            logger.info(f"📊 策略迭代建议参数（仅供参考）:")
+            logger.info(f"  做多建议: 止损={long_params.stop_loss}%, 止盈={long_params.take_profit}%, 金额=${long_params.trade_size}")
+            logger.info(f"  做空建议: 止损={short_params.stop_loss}%, 止盈={short_params.take_profit}%, 金额=${short_params.trade_size}")
+            logger.info(f"  当前用户配置: 止损={self.config.stop_loss_percent}%, 止盈={self.config.take_profit_percent}%, 金额=${self.config.trade_size}")
+                
+        except Exception as e:
+            logger.warning(f"获取策略迭代参数失败: {e}")
 
     def _calculate_decreasing_buy_amount(self, coin: str, base_amount: float) -> float:
         """
@@ -1002,27 +1050,27 @@ class TradingEngine:
         根据波动率、市值、趋势动态调整止损止盈
         止盈使用前端配置的趋势档位值
         """
-        # 使用前端配置的止盈值（趋势档位）
-        if self.config.dynamic_take_profit_enabled:
-            if trend_score >= self.config.take_profit_score_tier1:
-                dynamic_take_profit = self.config.take_profit_trend_9_10
-            elif trend_score >= self.config.take_profit_score_tier2:
-                dynamic_take_profit = self.config.take_profit_trend_7_8
-            elif trend_score >= self.config.take_profit_score_tier3:
-                dynamic_take_profit = self.config.take_profit_trend_5_6
+        # 使用前端配置的止盈值（趋势档位）- 做多配置
+        if self.config.long_dynamic_take_profit_enabled:
+            if trend_score >= 9:
+                dynamic_take_profit = self.config.long_take_profit_trend_9_10
+            elif trend_score >= 7:
+                dynamic_take_profit = self.config.long_take_profit_trend_7_8
+            elif trend_score >= 5:
+                dynamic_take_profit = self.config.long_take_profit_trend_5_6
             else:
-                dynamic_take_profit = self.config.take_profit_trend_default
+                dynamic_take_profit = self.config.long_take_profit_trend_default
         else:
             dynamic_take_profit = 6.0
 
-        # 止损使用前端配置的智能止损值
-        if self.config.smart_stop_loss_enabled:
-            if trend_score >= self.config.stop_loss_score_tier1:
-                dynamic_stop_loss = self.config.stop_loss_trend_8_plus
-            elif trend_score >= self.config.stop_loss_score_tier2:
-                dynamic_stop_loss = self.config.stop_loss_trend_6_7
+        # 止损使用前端配置的智能止损值 - 做多配置
+        if self.config.long_smart_stop_loss_enabled:
+            if trend_score >= 8:
+                dynamic_stop_loss = -self.config.long_stop_loss_trend_8_plus
+            elif trend_score >= 6:
+                dynamic_stop_loss = -self.config.long_stop_loss_trend_6_7
             else:
-                dynamic_stop_loss = self.config.stop_loss_trend_default
+                dynamic_stop_loss = -self.config.long_stop_loss_trend_default
         else:
             dynamic_stop_loss = -3.0
 
@@ -1337,7 +1385,7 @@ class TradingEngine:
         
         # 统计今日该币种的买入次数
         today_trades = trade_stats.get_today_trades_for_coin(coin)
-        buy_count = len([t for t in today_trades if t.get("action") == "buy"])
+        buy_count = len([t for t in today_trades if t.action == "buy"])
         
         # 解析递减比例
         factors = [float(x) for x in self.config.decreasing_factors.split(",")]
@@ -1453,16 +1501,16 @@ class TradingEngine:
             new_tp_percent = 0.2
             logger.info(f"  🥇 {coin}是黄金稳定币，保持0.2%止盈目标")
         elif self.config.take_profit_adjust_on_bad_sentiment and sentiment_score is not None and sentiment_score <= self.config.take_profit_bad_sentiment_threshold:
-            new_tp_percent = self.config.take_profit_trend_default
+            new_tp_percent = self.config.long_take_profit_trend_default
             logger.info(f"  🎯 {coin} 舆情极差({sentiment_score}分≤{self.config.take_profit_bad_sentiment_threshold}分)，收紧止盈至{new_tp_percent}%")
         elif trend_score >= self.config.take_profit_score_tier1:
-            new_tp_percent = self.config.take_profit_trend_9_10
+            new_tp_percent = self.config.long_take_profit_trend_9_10
         elif trend_score >= self.config.take_profit_score_tier2:
-            new_tp_percent = self.config.take_profit_trend_7_8
+            new_tp_percent = self.config.long_take_profit_trend_7_8
         elif trend_score >= self.config.take_profit_score_tier3:
-            new_tp_percent = self.config.take_profit_trend_5_6
+            new_tp_percent = self.config.long_take_profit_trend_5_6
         else:
-            new_tp_percent = self.config.take_profit_trend_default
+            new_tp_percent = self.config.long_take_profit_trend_default
 
         old_tp_percent = tp_order.get("tp_percent", 0)
         if abs(new_tp_percent - old_tp_percent) < 0.5:
@@ -1866,8 +1914,9 @@ class TradingEngine:
                 return []
 
             market_env = await check_market_environment(client)
-            logger.info(f"📊 市场环境: BTC评分={market_env.btc_score}, ETH评分={market_env.eth_score}, 可交易={market_env.can_trade}")
-            self._log(f"📊 市场环境: BTC评分={market_env.btc_score}, ETH评分={market_env.eth_score}, 可交易={market_env.can_trade}")
+            market_direction = "做多" if market_env.score >= 4 else "做空"
+            logger.info(f"📊 市场环境: BTC={market_env.btc_score}分, ETH={market_env.eth_score}分, 资金费率={market_env.funding_score}分, 综合={market_env.score}分 → 适合{market_direction}")
+            self._log(f"📊 市场环境: BTC={market_env.btc_score}分, ETH={market_env.eth_score}分, 资金费率={market_env.funding_score}分, 综合={market_env.score}分 → 适合{market_direction}")
             self._market_env_cache = market_env
             
             candidate_coins = []
@@ -1959,8 +2008,63 @@ class TradingEngine:
                     trend_result = await analyze_trend(candles)
                     trend_score = trend_result.score
                     trend = trend_result.trend
-                    bullish_score = getattr(trend_result, 'bullish_score', 5)
-                    bearish_score = getattr(trend_result, 'bearish_score', 5)
+                    original_bullish_score = getattr(trend_result, 'bullish_score', 5)
+                    original_bearish_score = getattr(trend_result, 'bearish_score', 5)
+
+                    # 情绪融合（可选，对齐 ai_trading_bot.js）
+                    # 融合后的 bullish_score 用于所有策略（主策略 + Fallback）
+                    if self.config.sentiment_fusion_enabled:
+                        try:
+                            # 根据模式选择融合方法
+                            if self.config.sentiment_fusion_mode == "free":
+                                # 免费模式：CoinGecko + Fear & Greed Index（推荐）
+                                sentiment_result = await sentiment_service.fuse_with_technical_score_v2(
+                                    coin=coin,
+                                    technical_score=original_bullish_score,
+                                    coingecko_weight=self.config.sentiment_coingecko_weight,
+                                    fear_greed_weight=self.config.sentiment_fear_greed_weight,
+                                    technical_weight=self.config.sentiment_technical_weight,
+                                    use_cache=True,
+                                    timeout=self.config.sentiment_fetch_timeout
+                                )
+                                bullish_score = sentiment_result["fused_score"]
+                                bearish_score = 10 - bullish_score
+                                trend_score = sentiment_result["fused_score"]
+                                
+                                if sentiment_result.get("warning"):
+                                    logger.info(f"  ⚠️ {coin} {sentiment_result['warning']}")
+                                
+                                fg_data = sentiment_result.get("fear_greed_data", {})
+                                fg_value = fg_data.get("value", 50) if fg_data else 50
+                                fg_class = fg_data.get("classification", "Neutral") if fg_data else "Neutral"
+                                logger.info(f"  🔄 {coin} 情绪融合(免费): 技术面{original_bullish_score} + CoinGecko{sentiment_result['coingecko_score']} + Fear&Greed[{fg_value} {fg_class}]→ 综合{bullish_score}")
+                            else:
+                                # 新闻模式：CoinGecko + 新闻（原有方式）
+                                sentiment_result = await sentiment_service.fuse_with_technical_score(
+                                    coin=coin,
+                                    technical_score=original_bullish_score,
+                                    coingecko_weight=self.config.sentiment_coingecko_weight,
+                                    news_weight=self.config.sentiment_news_weight,
+                                    technical_weight=self.config.sentiment_technical_weight,
+                                    use_cache=True,
+                                    timeout=self.config.sentiment_fetch_timeout,
+                                    bearish_alert_threshold=self.config.sentiment_bearish_alert_threshold
+                                )
+                                bullish_score = sentiment_result["fused_score"]
+                                bearish_score = 10 - bullish_score
+                                trend_score = sentiment_result["fused_score"]
+                                
+                                if sentiment_result.get("warning"):
+                                    logger.info(f"  ⚠️ {coin} {sentiment_result['warning']}")
+                                
+                                logger.info(f"  🔄 {coin} 情绪融合: 技术面{original_bullish_score} + CoinGecko{sentiment_result['coingecko_score']} + 新闻{sentiment_result['news_score']} → 综合{bullish_score}")
+                        except Exception as e:
+                            logger.warning(f"  ⚠️ {coin} 情绪融合失败: {e}，使用纯技术面评分")
+                            bullish_score = original_bullish_score
+                            bearish_score = original_bearish_score
+                    else:
+                        bullish_score = original_bullish_score
+                        bearish_score = original_bearish_score
 
                     sideways_result = await sideways_manager.check_sideways(client, inst_id, trend_score)
                     if sideways_result.is_sideways:
@@ -2061,94 +2165,19 @@ class TradingEngine:
                 }
                 indicators = c["indicators"]
 
-                # ========== 做多逻辑 ==========
-                # 第一层：看涨评分达标 → 执行共振分析
-                if bullish_score >= self.config.long_min_bullish_score:
-                    logger.info(f"    🎯 {coin} 看涨评分达标({bullish_score}>={self.config.long_min_bullish_score})，启动共振分析...")
-                    self._log(f"    🎯 {coin} 看涨评分达标({bullish_score}>={self.config.long_min_bullish_score})，启动共振分析")
+                # 根据大盘环境决定只分析单方向
+                market_env = getattr(self, '_market_env_cache', None)
+                market_favor_long = market_env and market_env.score >= 4  # 大盘好适合做多
+                market_favor_short = market_env and market_env.score < 4  # 大盘差适合做空
 
-                    market_env = getattr(self, '_market_env_cache', None)
-                    indicators = c["indicators"]
-                    technical_config = {
-                        "min_pass_count": self.config.technical_min_pass_count,
-                        "trend_score_threshold": self.config.technical_trend_score_threshold,
-                        "rsi_min": self.config.technical_rsi_min,
-                        "rsi_max": self.config.technical_rsi_max,
-                        "volume_ratio_min": self.config.technical_volume_ratio_min,
-                        "ma5_tolerance": self.config.technical_ma5_tolerance,
-                        "volatility_min": self.config.technical_volatility_min
-                    }
-                    resonance_result = await calculate_resonance_score(
-                        client, inst_id, trend_score, last_price,
-                        min_capital_flow_score=self.config.min_capital_flow_score,
-                        market_env=market_env,
-                        rsi=indicators.get("rsi", 50.0),
-                        volume_ratio=None,
-                        ma5=indicators.get("ma5", last_price),
-                        volatility=None,
-                        technical_config=technical_config
-                    )
+                # ========== 做多逻辑（仅大盘好时执行） ==========
+                if market_favor_long:
+                    # 第一层：看涨评分达标 → 执行共振分析
+                    if bullish_score >= self.config.long_min_bullish_score:
+                        logger.info(f"    🎯 {coin} 看涨评分达标({bullish_score}>={self.config.long_min_bullish_score})，大盘良好，启动做多共振分析...")
+                        self._log(f"    🎯 {coin} 看涨评分达标({bullish_score}>={self.config.long_min_bullish_score})，启动做多共振分析")
 
-                    if resonance_result.can_buy:
-                        can_buy = True
-                        buy_reason = f"共振通过(评分{resonance_result.total_score})"
-                        signal_type = "resonance"
-                        logger.info(f"  ✅ {coin} 共振分析通过: 总分{resonance_result.total_score}, 资金{resonance_result.capital_flow_score}, 大盘{resonance_result.market_env_score}")
-                        self._log(f"  ✅ {coin} 共振通过 ✅ 总分={resonance_result.total_score} 资金={resonance_result.capital_flow_score} 大盘={resonance_result.market_env_score}")
-                    else:
-                        logger.info(f"    ⏭️ {coin} 共振分析未通过: {resonance_result.reason}")
-                        self._log(f"    ⏭️ {coin} 共振未通过 总分={resonance_result.total_score} 原因: {resonance_result.reason}")
-
-                # 第二层：Fallback信号（看涨评分不达标时）
-                if not can_buy and bullish_score < self.config.bullish_fallback_threshold:
-                    # 严格抄底策略
-                    if self.config.dip_buy_enabled:
-                        market_env = getattr(self, '_market_env_cache', None)
-                        btc_trend = market_env.btc_score if market_env else 5
-                        eth_trend = market_env.eth_score if hasattr(market_env, 'eth_score') else 5
-
-                        strict_dip_check = self._check_strict_dip_buy(
-                            trend_score, btc_trend, eth_trend, rsi_value, volume_ratio, bearish_dict, last_price, indicators
-                        )
-                        if strict_dip_check["passed"]:
-                            can_buy = True
-                            buy_reason = strict_dip_check["reason"]
-                            signal_type = "strict_dip"
-                            logger.info(f"  ✅ {coin} 通过严格抄底筛选: {strict_dip_check['reason']}")
-                            self._log(f"  ✅ {coin} 抄底信号 ✅ RSI={rsi_value:.1f} 成交量={volume_ratio:.2f}x")
-
-                    # 阴线买入信号
-                    if not can_buy and self.config.bearish_candle_enabled and bearish_result.is_bearish:
-                        bearish_candle_check = self._check_bearish_candle(
-                            trend_score, rsi_value, volume_ratio, bearish_dict
-                        )
-                        if bearish_candle_check["passed"]:
-                            can_buy = True
-                            buy_reason = bearish_candle_check["reason"]
-                            signal_type = "bearish_candle"
-                            logger.info(f"  ✅ {coin} 通过阴线买入筛选: {bearish_candle_check['reason']}")
-                            self._log(f"  ✅ {coin} 阴线买入信号 ✅ RSI={rsi_value:.1f} 成交量={volume_ratio:.2f}x")
-
-                    # 暴跌反弹信号
-                    if not can_buy and self.config.crash_rebound_enabled:
-                        crash_rebound_check = self._check_crash_rebound(
-                            change_24h, trend_score, volume_ratio, rebound_percent, rsi_value
-                        )
-                        if crash_rebound_check["passed"]:
-                            can_buy = True
-                            buy_reason = crash_rebound_check["reason"]
-                            signal_type = "crash_rebound"
-                            logger.info(f"  ✅ {coin} 通过暴跌反弹筛选: {crash_rebound_check['reason']}")
-                            self._log(f"  ✅ {coin} 暴跌反弹信号 ✅ RSI={rsi_value:.1f} 成交量={volume_ratio:.2f}x 24h={change_24h:.1f}%")
-
-                # ========== 做空逻辑（与做多对称） ==========
-                # 第一层：看跌评分达标 → 执行共振分析
-                if bearish_score >= self.config.short_min_bearish_score:
-                    logger.info(f"    🎯 {coin} 看跌评分达标({bearish_score}>={self.config.short_min_bearish_score})，启动共振分析...")
-                    self._log(f"    🎯 {coin} 看跌评分达标({bearish_score}>={self.config.short_min_bearish_score})，启动共振分析")
-
-                    if resonance_result is None:
-                        market_env = getattr(self, '_market_env_cache', None)
+                        indicators = c["indicators"]
                         technical_config = {
                             "min_pass_count": self.config.technical_min_pass_count,
                             "trend_score_threshold": self.config.technical_trend_score_threshold,
@@ -2169,64 +2198,148 @@ class TradingEngine:
                             technical_config=technical_config
                         )
 
-                    # 做空共振判断：总分>=6 且 大盘可交易 且 资金流出
-                    short_resonance_pass = (
-                        resonance_result.total_score >= 6 and
-                        resonance_result.market_env_score >= 4 and
-                        (not resonance_result.capital_flow_score >= 7)  # 资金不是强势流入
-                    )
-                    if short_resonance_pass:
-                        can_short = True
-                        short_reason = f"共振通过(评分{resonance_result.total_score})"
-                        short_signal_type = "resonance"
-                        logger.info(f"  🔴 {coin} 做空共振分析通过: 总分{resonance_result.total_score}")
-                        self._log(f"  🔴 {coin} 做空共振通过 ✅ 总分={resonance_result.total_score} 资金={resonance_result.capital_flow_score} 大盘={resonance_result.market_env_score}")
-                    else:
-                        logger.info(f"    ⏭️ {coin} 做空共振分析未通过")
-                        self._log(f"    ⏭️ {coin} 做空共振未通过 总分={resonance_result.total_score} 资金={resonance_result.capital_flow_score} 大盘={resonance_result.market_env_score}")
+                        if resonance_result.can_buy:
+                            can_buy = True
+                            buy_reason = f"共振通过(评分{resonance_result.total_score})"
+                            signal_type = "resonance"
+                            logger.info(f"  ✅ {coin} 共振分析通过: 总分{resonance_result.total_score}, 资金{resonance_result.capital_flow_score}, 大盘{resonance_result.market_env_score}")
+                            self._log(f"  ✅ {coin} 共振通过 ✅ 总分={resonance_result.total_score} 资金={resonance_result.capital_flow_score} 大盘={resonance_result.market_env_score}")
+                        else:
+                            logger.info(f"    ⏭️ {coin} 共振分析未通过: {resonance_result.reason}")
+                            self._log(f"    ⏭️ {coin} 共振未通过 总分={resonance_result.total_score} 原因: {resonance_result.reason}")
 
-                # 第二层：Fallback信号（看跌评分不达标时）
-                if not can_short and bearish_score < self.config.short_bearish_fallback_threshold:
-                    # 严格做空策略（顶部做空）
-                    if self.config.short_dip_enabled:
-                        market_env = getattr(self, '_market_env_cache', None)
-                        btc_trend = market_env.btc_score if market_env else 5
-                        eth_trend = market_env.eth_score if hasattr(market_env, 'eth_score') else 5
+                    # 第二层：Fallback信号（看涨评分不达标时，也需要大盘好）
+                    if not can_buy and bullish_score < self.config.bullish_fallback_threshold:
+                        # 严格抄底策略（需要大盘好：BTC>=6, ETH>=5）
+                        if self.config.dip_buy_enabled:
+                            btc_trend = market_env.btc_score if market_env else 5
+                            eth_trend = market_env.eth_score if hasattr(market_env, 'eth_score') else 5
+                            market_ok_for_dip = btc_trend >= 6 and eth_trend >= 5  # 大盘验证
 
-                        short_dip_check = self._check_short_dip(
-                            trend_score, btc_trend, eth_trend, rsi_value, volume_ratio,
-                            bullish_dict, last_price, indicators
+                            if market_ok_for_dip:
+                                strict_dip_check = self._check_strict_dip_buy(
+                                    trend_score, btc_trend, eth_trend, rsi_value, volume_ratio, bearish_dict, last_price, indicators
+                                )
+                                if strict_dip_check["passed"]:
+                                    can_buy = True
+                                    buy_reason = strict_dip_check["reason"]
+                                    signal_type = "strict_dip"
+                                    logger.info(f"  ✅ {coin} 通过严格抄底筛选: {strict_dip_check['reason']}")
+                                    self._log(f"  ✅ {coin} 抄底信号 ✅ RSI={rsi_value:.1f} 成交量={volume_ratio:.2f}x")
+                            else:
+                                logger.info(f"    ⏭️ {coin} 抄底条件不满足: 大盘弱(BTC={btc_trend}/ETH={eth_trend})")
+
+                        # 阴线买入信号（需要大盘好）
+                        if not can_buy and self.config.bearish_candle_enabled and bearish_result.is_bearish:
+                            bearish_candle_check = self._check_bearish_candle(
+                                trend_score, rsi_value, volume_ratio, bearish_dict
+                            )
+                            if bearish_candle_check["passed"]:
+                                can_buy = True
+                                buy_reason = bearish_candle_check["reason"]
+                                signal_type = "bearish_candle"
+                                logger.info(f"  ✅ {coin} 通过阴线买入筛选: {bearish_candle_check['reason']}")
+                                self._log(f"  ✅ {coin} 阴线买入信号 ✅ RSI={rsi_value:.1f} 成交量={volume_ratio:.2f}x")
+
+                        # 暴跌反弹信号（需要大盘好）
+                        if not can_buy and self.config.crash_rebound_enabled:
+                            crash_rebound_check = self._check_crash_rebound(
+                                change_24h, trend_score, volume_ratio, rebound_percent, rsi_value
+                            )
+                            if crash_rebound_check["passed"]:
+                                can_buy = True
+                                buy_reason = crash_rebound_check["reason"]
+                                signal_type = "crash_rebound"
+                                logger.info(f"  ✅ {coin} 通过暴跌反弹筛选: {crash_rebound_check['reason']}")
+                                self._log(f"  ✅ {coin} 暴跌反弹信号 ✅ RSI={rsi_value:.1f} 成交量={volume_ratio:.2f}x 24h={change_24h:.1f}%")
+
+                # ========== 做空逻辑（仅大盘差时执行） ==========
+                elif market_favor_short:
+                    # 第一层：看跌评分达标 → 执行共振分析
+                    if bearish_score >= self.config.short_min_bearish_score:
+                        logger.info(f"    🎯 {coin} 看跌评分达标({bearish_score}>={self.config.short_min_bearish_score})，大盘较差，启动做空共振分析...")
+                        self._log(f"    🎯 {coin} 看跌评分达标({bearish_score}>={self.config.short_min_bearish_score})，启动做空共振分析")
+
+                        technical_config = {
+                            "min_pass_count": self.config.technical_min_pass_count,
+                            "trend_score_threshold": self.config.technical_trend_score_threshold,
+                            "rsi_min": self.config.technical_rsi_min,
+                            "rsi_max": self.config.technical_rsi_max,
+                            "volume_ratio_min": self.config.technical_volume_ratio_min,
+                            "ma5_tolerance": self.config.technical_ma5_tolerance,
+                            "volatility_min": self.config.technical_volatility_min
+                        }
+                        resonance_result = await calculate_resonance_score(
+                            client, inst_id, trend_score, last_price,
+                            min_capital_flow_score=self.config.min_capital_flow_score,
+                            market_env=market_env,
+                            rsi=indicators.get("rsi", 50.0),
+                            volume_ratio=None,
+                            ma5=indicators.get("ma5", last_price),
+                            volatility=None,
+                            technical_config=technical_config
                         )
-                        if short_dip_check["passed"]:
-                            can_short = True
-                            short_reason = short_dip_check["reason"]
-                            short_signal_type = "short_dip"
-                            logger.info(f"    🎯 {coin} 通过顶部做空筛选: {short_dip_check['reason']}")
-                            self._log(f"    🎯 {coin} 顶部做空信号 ✅ RSI={rsi_value:.1f} 成交量={volume_ratio:.2f}x")
 
-                    # 阳线卖出信号
-                    if not can_short and self.config.short_bearish_enabled:
-                        short_bearish_check = self._check_short_bearish(
-                            trend_score, rsi_value, volume_ratio, bullish_dict.get("consecutive_count", 0), indicators
+                        # 做空共振判断：总分>=6 且 资金流出（大盘环境差更适合做空）
+                        short_resonance_pass = (
+                            resonance_result.total_score >= 6 and
+                            (not resonance_result.capital_flow_score >= 7)  # 资金不是强势流入
                         )
-                        if short_bearish_check["passed"]:
+                        if short_resonance_pass:
                             can_short = True
-                            short_reason = short_bearish_check["reason"]
-                            short_signal_type = "short_bearish"
-                            logger.info(f"    🎯 {coin} 通过阳线卖出筛选: {short_bearish_check['reason']}")
-                            self._log(f"    🎯 {coin} 阳线卖出信号 ✅ RSI={rsi_value:.1f} 成交量={volume_ratio:.2f}x")
+                            short_reason = f"共振通过(评分{resonance_result.total_score})"
+                            short_signal_type = "resonance"
+                            logger.info(f"  🔴 {coin} 做空共振分析通过: 总分{resonance_result.total_score}, 大盘={resonance_result.market_env_score}分(大盘差更适合做空)")
+                            self._log(f"  🔴 {coin} 做空共振通过 ✅ 总分={resonance_result.total_score} 资金={resonance_result.capital_flow_score} 大盘={resonance_result.market_env_score}(大盘差更适合做空)")
+                        else:
+                            logger.info(f"    ⏭️ {coin} 做空共振分析未通过")
+                            self._log(f"    ⏭️ {coin} 做空共振未通过 总分={resonance_result.total_score} 资金={resonance_result.capital_flow_score}")
 
-                    # 暴涨回落信号
-                    if not can_short and self.config.short_crash_enabled:
-                        short_crash_check = self._check_short_crash(
-                            change_24h, trend_score, 0, rsi_value, volume_ratio
-                        )
-                        if short_crash_check["passed"]:
-                            can_short = True
-                            short_reason = short_crash_check["reason"]
-                            short_signal_type = "short_crash"
-                            logger.info(f"    🎯 {coin} 通过暴涨回落筛选: {short_crash_check['reason']}")
-                            self._log(f"    🎯 {coin} 暴涨回落信号 ✅ RSI={rsi_value:.1f} 成交量={volume_ratio:.2f}x 24h={change_24h:.1f}%")
+                    # 第二层：Fallback信号（看跌评分不达标时，也需要大盘差）
+                    if not can_short and bearish_score < self.config.short_bearish_fallback_threshold:
+                        # 严格做空策略（顶部做空，需要大盘差：BTC<6或ETH<5）
+                        if self.config.short_dip_enabled:
+                            btc_trend = market_env.btc_score if market_env else 5
+                            eth_trend = market_env.eth_score if hasattr(market_env, 'eth_score') else 5
+                            market_ok_for_short = btc_trend < 6 or eth_trend < 5  # 大盘差验证
+
+                            if market_ok_for_short:
+                                short_dip_check = self._check_short_dip(
+                                    trend_score, btc_trend, eth_trend, rsi_value, volume_ratio,
+                                    bullish_dict, last_price, indicators
+                                )
+                                if short_dip_check["passed"]:
+                                    can_short = True
+                                    short_reason = short_dip_check["reason"]
+                                    short_signal_type = "short_dip"
+                                    logger.info(f"    🎯 {coin} 通过顶部做空筛选: {short_dip_check['reason']}")
+                                    self._log(f"    🎯 {coin} 顶部做空信号 ✅ RSI={rsi_value:.1f} 成交量={volume_ratio:.2f}x")
+                            else:
+                                logger.info(f"    ⏭️ {coin} 顶部做空条件不满足: 大盘强(BTC={btc_trend}/ETH={eth_trend})")
+
+                        # 阳线卖出信号（需要大盘差）
+                        if not can_short and self.config.short_bearish_enabled:
+                            short_bearish_check = self._check_short_bearish(
+                                trend_score, rsi_value, volume_ratio, bullish_dict.get("consecutive_count", 0), indicators
+                            )
+                            if short_bearish_check["passed"]:
+                                can_short = True
+                                short_reason = short_bearish_check["reason"]
+                                short_signal_type = "short_bearish"
+                                logger.info(f"    🎯 {coin} 通过阳线卖出筛选: {short_bearish_check['reason']}")
+                                self._log(f"    🎯 {coin} 阳线卖出信号 ✅ RSI={rsi_value:.1f} 成交量={volume_ratio:.2f}x")
+
+                        # 暴涨回落信号（需要大盘差）
+                        if not can_short and self.config.short_crash_enabled:
+                            short_crash_check = self._check_short_crash(
+                                change_24h, trend_score, 0, rsi_value, volume_ratio
+                            )
+                            if short_crash_check["passed"]:
+                                can_short = True
+                                short_reason = short_crash_check["reason"]
+                                short_signal_type = "short_crash"
+                                logger.info(f"    🎯 {coin} 通过暴涨回落筛选: {short_crash_check['reason']}")
+                                self._log(f"    🎯 {coin} 暴涨回落信号 ✅ RSI={rsi_value:.1f} 成交量={volume_ratio:.2f}x 24h={change_24h:.1f}%")
 
                 # 最终判断：做多或做空条件都不满足，跳过
                 if not can_buy and not can_short:
@@ -3688,7 +3801,20 @@ class TradingEngine:
             "order_id": None,
             "error": None
         }
-        
+
+        signal_type_map = {"buy": SignalType.BUY, "sell": SignalType.SELL, "short": SignalType.SHORT, "cover": SignalType.COVER}
+        dedup_signal_type = signal_type_map.get(signal.action, SignalType.BUY)
+
+        dedup_result = signal_dedup.check_signal(signal.coin, dedup_signal_type)
+        if not dedup_result.allowed:
+            logger.warning(f"🚫 信号被拦截 [{signal.coin}]: {dedup_result.reason}")
+            result["error"] = dedup_result.reason
+            result["blocked_by_dedup"] = True
+            result["dedup_status"] = dedup_result.status.value
+            return result
+
+        signal_dedup.set_pending(signal.coin)
+
         logger.info("")
         logger.info(f"🤖 AI分析 {signal.coin}...")
         logger.info(f"  当前价格: ${signal.price:.4f}")
@@ -3863,14 +3989,27 @@ class TradingEngine:
                 amount=signal.amount,
                 reason=signal.reason,
                 time=datetime.now(BEIJING_TZ).isoformat(),
-                side=signal.side
+                side=signal.side,
+                is_swap=self.config.use_swap,
+                leverage=float(self.config.short_leverage) if self.config.use_swap else 1.0,
+                is_simulation=dry_run
             )
             trade_stats.record_trade(trade_record)
-            
+
+            signal_dedup.record_signal(
+                coin=signal.coin,
+                signal_type=dedup_signal_type,
+                price=signal.price,
+                reason=signal.reason,
+                trend_score=signal.trend_score,
+                resonance_score=signal.resonance_score
+            )
+            signal_dedup.clear_pending(signal.coin)
+
             result["executed"] = True
             result["order_id"] = "simulation"
             return result
-        
+
         if emergency_stop.is_stopped():
             result["error"] = "紧急停止状态"
             logger.info(f"  决策: HOLD")
@@ -3907,6 +4046,16 @@ class TradingEngine:
                     result["executed"] = True
                     result["order_id"] = order_data.get("ordId")
 
+                    signal_dedup.record_signal(
+                        coin=signal.coin,
+                        signal_type=dedup_signal_type,
+                        price=signal.price,
+                        reason=signal.reason,
+                        trend_score=signal.trend_score,
+                        resonance_score=signal.resonance_score
+                    )
+                    signal_dedup.clear_pending(signal.coin)
+
                     self._record_trade_time(signal.coin)
 
                     # 记录持仓入场时间（用于时间止损）
@@ -3929,7 +4078,10 @@ class TradingEngine:
                         amount=signal.amount,
                         reason=signal.reason,
                         time=datetime.now(BEIJING_TZ).isoformat(),
-                        side=signal.side
+                        side=signal.side,
+                        is_swap=self.config.use_swap,
+                        leverage=float(self.config.long_leverage) if self.config.use_swap else 1.0,
+                        is_simulation=False
                     )
                     trade_stats.record_trade(trade_record)
 
@@ -3949,9 +4101,10 @@ class TradingEngine:
                     logger.error(f"下单失败: {result['error']}")
         
         except Exception as e:
+            signal_dedup.clear_pending(signal.coin)
             result["error"] = str(e)
             logger.error(f"执行信号失败: {e}")
-        
+
         return result
     
     async def check_positions(self) -> List[Dict]:
@@ -4063,8 +4216,19 @@ class TradingEngine:
                             reason = f"动态止盈: 盈利{pnl_percent:.2f}% >= {dynamic_take_profit:.2f}%"
                             self.pyramid_manager.reset(coin)
                     else:
-                        # 使用固定止损止盈
-                        if pnl_percent <= self.config.stop_loss_percent:
+                        # 使用固定止损止盈（支持智能止损）- 使用做多配置
+                        effective_stop_loss = -self.config.long_stop_loss_percent if hasattr(self.config, 'long_stop_loss_percent') else -self.config.stop_loss_percent
+                        
+                        # 智能止损：根据趋势评分动态调整止损线（做多）
+                        if self.config.long_smart_stop_loss_enabled:
+                            if trend_score >= 8:
+                                effective_stop_loss = -self.config.long_stop_loss_trend_8_plus
+                            elif trend_score >= 6:
+                                effective_stop_loss = -self.config.long_stop_loss_trend_6_7
+                            else:
+                                effective_stop_loss = -self.config.long_stop_loss_trend_default
+                        
+                        if pnl_percent <= effective_stop_loss:
                             # 60分钟持仓保护：持仓时间不足时不执行任何操作
                             if self.config.stop_loss_time_protection_enabled:
                                 entry_time = self.position_entry_times.get(coin)
@@ -4102,12 +4266,15 @@ class TradingEngine:
                                                     continue
                             # 执行止损
                             action = "sell"
-                            reason = f"止损: 亏损{pnl_percent:.2f}% <= {self.config.stop_loss_percent}%"
+                            if self.config.long_smart_stop_loss_enabled:
+                                reason = f"智能止损: 亏损{pnl_percent:.2f}% <= {effective_stop_loss:.2f}% (趋势{trend_score}分)"
+                            else:
+                                reason = f"止损: 亏损{pnl_percent:.2f}% <= {effective_stop_loss:.2f}%"
                             blacklist_manager.add_to_blacklist(coin, "止损触发")
 
-                        elif pnl_percent >= self.config.take_profit_percent:
+                        elif pnl_percent >= self.config.long_take_profit_percent if hasattr(self.config, 'long_take_profit_percent') else self.config.take_profit_percent:
                             action = "sell"
-                            reason = f"止盈: 盈利{pnl_percent:.2f}% >= {self.config.take_profit_percent}%"
+                            reason = f"止盈: 盈利{pnl_percent:.2f}% >= {self.config.long_take_profit_percent if hasattr(self.config, 'long_take_profit_percent') else self.config.take_profit_percent}%"
                             self.pyramid_manager.reset(coin)
 
                     # 金字塔补仓：亏损>=5%且趋势>=6分时补仓（示例项目逻辑）
@@ -4137,10 +4304,35 @@ class TradingEngine:
                                         })
                                         continue
 
-                    # 小盈减仓：盈利>=止盈线阈值且仓位>阈值，及时减仓
-                    if not action and self.config.small_profit_reduce_enabled and pnl_percent > 0:
-                        take_profit_threshold = dynamic_take_profit if self.config.dynamic_bands_enabled else self.config.take_profit_percent
-                        small_profit_threshold = take_profit_threshold * (self.config.small_profit_reduce_threshold_percent / 100)
+                    # 分层减仓止盈（波段操作）- 使用做多配置
+                    if not action and self.config.long_band_trade_enabled and pnl_percent > 0:
+                        if pnl_percent >= self.config.long_band_trade_final_reduce_at:
+                            # 最终止盈：清仓
+                            action = "sell"
+                            reason = f"分层止盈(最终档): 盈利{pnl_percent:.2f}%>={self.config.long_band_trade_final_reduce_at}%，清仓"
+                            self._record_reduce_position_price(coin, current_price, reason)
+                            self._log(f"  📈 {coin} 分层止盈(最终档): 清仓 @{current_price:.4f}")
+                        elif pnl_percent >= self.config.long_band_trade_second_reduce_at:
+                            # 第二档减仓
+                            reduce_ratio = self.config.long_band_trade_second_reduce_percent / 100.0
+                            action = "sell"
+                            amount = amount * reduce_ratio
+                            reason = f"分层减仓(第二档): 盈利{pnl_percent:.2f}%>={self.config.long_band_trade_second_reduce_at}%，减仓{self.config.long_band_trade_second_reduce_percent}%"
+                            self._record_reduce_position_price(coin, current_price, reason)
+                            self._log(f"  📈 {coin} 分层减仓(第二档): 减仓{self.config.long_band_trade_second_reduce_percent}% @{current_price:.4f}")
+                        elif pnl_percent >= self.config.long_band_trade_reduce_at:
+                            # 第一档减仓
+                            reduce_ratio = self.config.long_band_trade_reduce_percent / 100.0
+                            action = "sell"
+                            amount = amount * reduce_ratio
+                            reason = f"分层减仓(第一档): 盈利{pnl_percent:.2f}%>={self.config.long_band_trade_reduce_at}%，减仓{self.config.long_band_trade_reduce_percent}%"
+                            self._record_reduce_position_price(coin, current_price, reason)
+                            self._log(f"  📈 {coin} 分层减仓(第一档): 减仓{self.config.long_band_trade_reduce_percent}% @{current_price:.4f}")
+
+                    # 小盈减仓：盈利>=止盈线阈值且仓位>阈值，及时减仓 - 使用做多配置
+                    if not action and self.config.long_small_profit_reduce_enabled and pnl_percent > 0:
+                        take_profit_threshold = dynamic_take_profit if self.config.dynamic_bands_enabled else (self.config.long_take_profit_percent if hasattr(self.config, 'long_take_profit_percent') else self.config.take_profit_percent)
+                        small_profit_threshold = take_profit_threshold * (self.config.long_small_profit_reduce_threshold_percent / 100)
                         if pnl_percent >= small_profit_threshold:
                             position_value = amount * current_price
                             total_equity_result = await client.get_balance()
@@ -4148,13 +4340,13 @@ class TradingEngine:
                                 total_equity = float(total_equity_result.get("data", [{}])[0].get("totalEq", 0))
                                 if total_equity > 0:
                                     position_percent = (position_value / total_equity) * 100
-                                    if position_percent > self.config.small_profit_reduce_position_threshold:
+                                    if position_percent > self.config.long_small_profit_reduce_position_threshold:
                                         action = "sell"
-                                        reduce_ratio = self.config.small_profit_reduce_ratio / 100.0
-                                        reason = f"小盈减仓: 盈利{pnl_percent:.2f}%>=止盈线{small_profit_threshold:.2f}%且仓位{position_percent:.1f}%>{self.config.small_profit_reduce_position_threshold}%，减仓{self.config.small_profit_reduce_ratio:.0f}%"
+                                        reduce_ratio = self.config.long_small_profit_reduce_ratio / 100.0
+                                        reason = f"小盈减仓: 盈利{pnl_percent:.2f}%>=止盈线{small_profit_threshold:.2f}%且仓位{position_percent:.1f}%>{self.config.long_small_profit_reduce_position_threshold}%，减仓{self.config.long_small_profit_reduce_ratio:.0f}%"
                                         amount = amount * reduce_ratio
                                         self._record_reduce_position_price(coin, current_price, reason)
-                                        self._log(f"  📈 {coin} 小盈减仓: 卖出{self.config.small_profit_reduce_ratio:.0f}% @{current_price:.4f}")
+                                        self._log(f"  📈 {coin} 小盈减仓: 卖出{self.config.long_small_profit_reduce_ratio:.0f}% @{current_price:.4f}")
 
                     # 超仓减仓：仓位>30%强制减仓至20%
                     if not action and self.config.over_position_reduce_enabled:
@@ -4315,7 +4507,8 @@ class TradingEngine:
                                 trading_config=self.config,
                                 volatility=volatility,
                                 turnover_24h=turnover_24h,
-                                trend_score=trend_score
+                                trend_score=trend_score,
+                                pyramid_time_protection_minutes=self.config.short_stop_loss_time_protection_minutes
                             )
 
                             if cover_signal["should_cover"]:
@@ -4558,7 +4751,7 @@ class TradingEngine:
         # 扫描黑名单币种趋势
         logger.info("")
         logger.info("=== 🔍 扫描黑名单币种趋势 ===")
-        logger.info(f"时间: {datetime.now().strftime('%Y/%m/%d %H:%M:%S')}")
+        logger.info(f"时间: {datetime.now(BEIJING_TZ).strftime('%Y/%m/%d %H:%M:%S')}")
         self._log("=== 🔍 扫描黑名单币种趋势 ===")
         
         blacklisted = blacklist_manager.get_blacklisted_coins()
@@ -4660,7 +4853,10 @@ class TradingEngine:
                             reason=action["reason"],
                             time=datetime.now(BEIJING_TZ).isoformat(),
                             pnl=trade.pnl_percent,
-                            side="short"
+                            side="short",
+                            is_swap=self.config.use_swap,
+                            leverage=float(self.config.short_leverage) if self.config.use_swap else 1.0,
+                            is_simulation=True
                         )
                         trade_stats.record_trade(cover_record)
 
@@ -4716,7 +4912,10 @@ class TradingEngine:
                                 price=current_price,
                                 amount=amount,
                                 reason=reason,
-                                side="long"
+                                side="long",
+                                is_swap=self.config.use_swap,
+                                leverage=float(self.config.long_leverage) if self.config.use_swap else 1.0,
+                                is_simulation=False
                             )
                             trade_stats.record_trade(trade_record)
 
@@ -4996,7 +5195,10 @@ class TradingEngine:
                                         reason=sell_signal["reason"],
                                         time=datetime.now(BEIJING_TZ).isoformat(),
                                         pnl=trade.pnl_percent,
-                                        side="long"
+                                        side="long",
+                                        is_swap=self.config.use_swap,
+                                        leverage=float(self.config.long_leverage) if self.config.use_swap else 1.0,
+                                        is_simulation=True
                                     )
                                     trade_stats.record_trade(sell_record)
                                     

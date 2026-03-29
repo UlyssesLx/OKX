@@ -149,154 +149,6 @@ async def get_sentiment(coin: str):
     return SentimentResponse(**data)
 
 
-@router.get("/evolution/params")
-async def get_evolution_params():
-    try:
-        from app.services.trading_engine import trading_engine
-        return {
-            "long": {
-                "stop_loss": trading_engine.config.stop_loss_trend_8_plus,
-                "take_profit": trading_engine.config.take_profit_trend_9_10,
-                "max_positions": trading_engine.config.long_max_positions,
-                "trade_size": trading_engine.config.long_position_size,
-                "sentiment_threshold": trading_engine.config.sentiment_threshold
-            },
-            "short": {
-                "stop_loss": -trading_engine.config.short_stop_loss_percent,
-                "take_profit": trading_engine.config.short_take_profit_percent,
-                "max_positions": trading_engine.config.short_max_positions,
-                "trade_size": trading_engine.config.short_position_size,
-                "sentiment_threshold": trading_engine.config.short_sentiment_threshold
-            }
-        }
-    except (ImportError, AttributeError):
-        params = strategy_evolution.get_current_params()
-        return {
-            "long": params.long.model_dump(),
-            "short": params.short.model_dump()
-        }
-
-
-@router.post("/evolution/params")
-async def update_evolution_params(params_data: dict):
-    try:
-        from app.services.trading_engine import trading_engine
-        if "long" in params_data:
-            long_params = params_data["long"]
-            trading_engine.config.stop_loss_trend_8_plus = long_params.get("stop_loss", -3.0)
-            trading_engine.config.take_profit_trend_9_10 = long_params.get("take_profit", 15.0)
-            trading_engine.config.long_max_positions = long_params.get("max_positions", 5)
-            trading_engine.config.long_position_size = long_params.get("trade_size", 60.0)
-            trading_engine.config.sentiment_threshold = long_params.get("sentiment_threshold", 7)
-        if "short" in params_data:
-            short_params = params_data["short"]
-            trading_engine.config.short_stop_loss_percent = abs(short_params.get("stop_loss", 3.0))
-            trading_engine.config.short_take_profit_percent = short_params.get("take_profit", 6.0)
-            trading_engine.config.short_max_positions = short_params.get("max_positions", 1)
-            trading_engine.config.short_position_size = short_params.get("trade_size", 40.0)
-            trading_engine.config.short_sentiment_threshold = short_params.get("sentiment_threshold", 3)
-    except (ImportError, AttributeError):
-        pass
-
-    from app.services.strategy_evolution import StrategyParams, LongShortParams
-    if "long" in params_data:
-        strategy_evolution.log.current_params.long = StrategyParams(**params_data["long"])
-    if "short" in params_data:
-        strategy_evolution.log.current_params.short = StrategyParams(**params_data["short"])
-    strategy_evolution._save_log()
-    return {"success": True, "params": {
-        "long": strategy_evolution.log.current_params.long.model_dump(),
-        "short": strategy_evolution.log.current_params.short.model_dump()
-    }}
-
-
-@router.get("/evolution/status", response_model=EvolutionResponse)
-async def get_evolution_status():
-    status = strategy_evolution.get_status()
-    params = strategy_evolution.get_current_params()
-    return EvolutionResponse(
-        paused=status["is_paused"],
-        params=params.model_dump(),
-        version=status["version"],
-        iterations_count=status["iterations_count"],
-        total_trades=status["total_trades"],
-        wins=status["wins"],
-        losses=status["losses"],
-        consecutive_losses=status["consecutive_losses"],
-        last_trade_time=status["last_trade_time"]
-    )
-
-
-@router.get("/evolution/history")
-async def get_evolution_history(limit: int = 20):
-    """获取策略进化历史记录"""
-    from app.services.strategy_evolution import EvolutionIteration
-    history = strategy_evolution.log.iterations
-    # 返回最近的 N 条记录
-    recent_history = history[-limit:] if len(history) > limit else history
-    return {
-        "version": strategy_evolution.log.version,
-        "total_iterations": len(history),
-        "iterations": [
-            {
-                "version": iter.version,
-                "date": iter.date,
-                "trigger": iter.trigger,
-                "changes": iter.changes,
-                "params_before": iter.params_before,
-                "params_after": iter.params_after,
-                "performance": iter.performance
-            }
-            for iter in recent_history
-        ]
-    }
-
-
-@router.get("/evolution/iterations")
-async def get_evolution_iterations():
-    """获取所有进化迭代详情"""
-    return {
-        "version": strategy_evolution.log.version,
-        "iterations": strategy_evolution.log.iterations
-    }
-
-
-@router.get("/evolution/config")
-async def get_evolution_config():
-    """获取策略进化配置参数"""
-    config = strategy_evolution.config
-    return {
-        "min_trades_for_review": config.min_trades_for_review,
-        "consecutive_loss_threshold": config.consecutive_loss_threshold,
-        "win_rate_high": config.win_rate_high,
-        "win_rate_low": config.win_rate_low,
-        "pause_after_losses_hours": config.pause_after_losses_hours
-    }
-
-
-@router.post("/evolution/config")
-async def update_evolution_config(config_data: dict):
-    """更新策略进化配置参数"""
-    config = strategy_evolution.config
-    if "min_trades_for_review" in config_data:
-        config.min_trades_for_review = config_data["min_trades_for_review"]
-    if "consecutive_loss_threshold" in config_data:
-        config.consecutive_loss_threshold = config_data["consecutive_loss_threshold"]
-    if "win_rate_high" in config_data:
-        config.win_rate_high = config_data["win_rate_high"]
-    if "win_rate_low" in config_data:
-        config.win_rate_low = config_data["win_rate_low"]
-    if "pause_after_losses_hours" in config_data:
-        config.pause_after_losses_hours = config_data["pause_after_losses_hours"]
-    return {"success": True, "config": {
-        "min_trades_for_review": config.min_trades_for_review,
-        "consecutive_loss_threshold": config.consecutive_loss_threshold,
-        "win_rate_high": config.win_rate_high,
-        "win_rate_low": config.win_rate_low,
-        "pause_after_losses_hours": config.pause_after_losses_hours
-    }}
-
-
 @router.get("/blacklist", response_model=BlacklistResponse)
 async def get_blacklist():
     summary = blacklist_manager.get_blacklist_summary()
@@ -323,8 +175,8 @@ async def remove_from_blacklist(coin: str):
 
 
 @router.get("/stats", response_model=StatsResponse)
-async def get_trade_stats():
-    stats = trade_stats.calculate_stats()
+async def get_trade_stats(is_simulation: Optional[bool] = None):
+    stats = trade_stats.calculate_stats(is_simulation=is_simulation)
     if not stats:
         return StatsResponse(
             summary={"total_trades": 0, "buy_count": 0, "sell_count": 0, "win_count": 0, "loss_count": 0, "win_rate": 0, "avg_profit": 0, "avg_loss": 0},
@@ -424,23 +276,27 @@ async def get_coordinator_status():
 @router.post("/coordinator/start")
 async def start_coordinator(dry_run: bool = True):
     """启动协调器，检查间隔由时区感知配置统一管理"""
-    from app.config.sparrow_config import sparrow_config, get_check_interval, get_current_time_zone
-    
-    # 使用配置的默认间隔（安静时段）作为基础间隔
-    base_interval = get_check_interval(sparrow_config)
-    coordinator.start(interval_minutes=base_interval, dry_run=dry_run)
-    
-    current_tz = get_current_time_zone()
-    if sparrow_config.timezone_aware_enabled:
-        return {
-            "success": True, 
-            "message": f"协调器已启动，当前时段: {current_tz}，检查间隔: {base_interval}分钟（时区感知已启用）"
-        }
-    else:
-        return {
-            "success": True, 
-            "message": f"协调器已启动，检查间隔: {base_interval}分钟（时区感知已禁用）"
-        }
+    try:
+        from app.config.sparrow_config import sparrow_config, get_check_interval, get_current_time_zone
+        
+        base_interval = get_check_interval(sparrow_config)
+        await coordinator.start(interval_minutes=base_interval, dry_run=dry_run)
+        
+        current_tz = get_current_time_zone()
+        if sparrow_config.timezone_aware_enabled:
+            return {
+                "success": True, 
+                "message": f"协调器已启动，当前时段: {current_tz}，检查间隔: {base_interval}分钟（时区感知已启用）"
+            }
+        else:
+            return {
+                "success": True, 
+                "message": f"协调器已启动，检查间隔: {base_interval}分钟（时区感知已禁用）"
+            }
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return {"success": False, "error": str(e)}
 
 
 @router.post("/coordinator/stop")
@@ -487,18 +343,18 @@ async def clear_emergency_stop():
 
 @router.get("/sideways/status")
 async def get_sideways_status():
-    return sideways_manager.status
+    return sideways_manager.status_summary
 
 
 @router.delete("/sideways/{coin}")
 async def reset_sideways(coin: str):
-    sideways_manager.reset(coin.upper())
+    await sideways_manager.reset(coin.upper())
     return {"success": True, "coin": coin.upper()}
 
 
 @router.delete("/sideways")
 async def reset_all_sideways():
-    coordinator.reset_sideways()
+    await sideways_manager.reset_all()
     return {"success": True, "message": "所有横盘状态已重置"}
 
 
@@ -784,44 +640,58 @@ DEFAULT_SMART_TRADING_CONFIG = {
     "pyramid_on_stop_loss_trend_score": 8,
     "pyramid_on_stop_loss_max_position_percent": 15.0,
     "pyramid_on_stop_loss_min_cash": 25.0,
-    # 智能止损配置
-    "smart_stop_loss_enabled": True,
-    "stop_loss_trend_8_plus": -3.0,
-    "stop_loss_trend_6_7": -2.0,
-    "stop_loss_trend_default": -1.5,
-    "stop_loss_time_protection_enabled": True,
-    "stop_loss_time_protection_minutes": 60,
-    # 动态止盈配置
-    "dynamic_take_profit_enabled": True,
-    "take_profit_trend_9_10": 15.0,
-    "take_profit_trend_7_8": 10.0,
-    "take_profit_trend_5_6": 8.0,
-    "take_profit_trend_default": 6.0,
-    "partial_take_profit_percent": 0.5,
+    # 做多智能止损配置
+    "long_smart_stop_loss_enabled": True,
+    "long_stop_loss_trend_8_plus": 3.0,
+    "long_stop_loss_trend_6_7": 2.0,
+    "long_stop_loss_trend_default": 1.5,
+    # 做多动态止盈配置
+    "long_dynamic_take_profit_enabled": True,
+    "long_take_profit_trend_9_10": 15.0,
+    "long_take_profit_trend_7_8": 10.0,
+    "long_take_profit_trend_5_6": 8.0,
+    "long_take_profit_trend_default": 6.0,
+    # 做空智能止损配置
+    "short_smart_stop_loss_enabled": True,
+    "short_stop_loss_trend_0_2": 3.0,
+    "short_stop_loss_trend_3_4": 2.0,
+    "short_stop_loss_trend_default": 1.5,
+    # 做空动态止盈配置
+    "short_dynamic_take_profit_enabled": True,
+    "short_take_profit_trend_0_1": 15.0,
+    "short_take_profit_trend_2_3": 10.0,
+    "short_take_profit_trend_4": 8.0,
+    "short_take_profit_trend_default": 6.0,
     # 时间衰减配置
     "time_decay_enabled": True,
     "time_decay_factor": 0.1,
-    # 小盈减仓配置
-    "small_profit_reduce_enabled": True,
-    "small_profit_reduce_threshold_percent": 50.0,
-    "small_profit_reduce_position_threshold": 15.0,
+    # 做多小盈减仓配置
+    "long_small_profit_reduce_enabled": True,
+    "long_small_profit_reduce_threshold_percent": 50.0,
+    "long_small_profit_reduce_position_threshold": 15.0,
+    "long_small_profit_reduce_ratio": 50.0,
+    # 做空小盈减仓配置
+    "short_small_profit_reduce_enabled": True,
+    "short_small_profit_reduce_threshold_percent": 50.0,
+    "short_small_profit_reduce_position_threshold": 15.0,
+    "short_small_profit_reduce_ratio": 50.0,
+    # 做多分层减仓止盈配置
+    "long_band_trade_enabled": True,
+    "long_band_trade_reduce_at": 1.5,
+    "long_band_trade_reduce_percent": 30.0,
+    "long_band_trade_second_reduce_at": 3.0,
+    "long_band_trade_second_reduce_percent": 50.0,
+    "long_band_trade_final_reduce_at": 6.0,
+    # 做空分层减仓止盈配置
+    "short_band_trade_enabled": True,
+    "short_band_trade_reduce_at": 1.5,
+    "short_band_trade_reduce_percent": 30.0,
+    "short_band_trade_second_reduce_at": 3.0,
+    "short_band_trade_second_reduce_percent": 50.0,
+    "short_band_trade_final_reduce_at": 6.0,
     # 超仓减仓配置
     "over_position_reduce_enabled": True,
     "over_position_reduce_threshold": 30.0,
-    "over_position_reduce_target": 20.0,
-    # 智能豁免期配置
-    "over_position_exemption_enabled": True,
-    "exemption_loss_high_minutes": 60,
-    "exemption_loss_medium_minutes": 45,
-    "exemption_profit_minutes": 30,
-    # 波段操作配置
-    "band_trade_enabled": True,
-    "band_trade_reduce_at": 1.5,
-    "band_trade_second_reduce_at": 3.0,
-    "band_trade_final_reduce_at": 6.0,
-    "band_trade_reduce_percent": 30.0,
-    "band_trade_second_reduce_percent": 50.0,
-    "band_trade_buy_back_at": -2.0,
     # 技术面验证配置
     "technical_validation_enabled": True,
     "technical_min_pass_count": 2,
@@ -830,7 +700,10 @@ DEFAULT_SMART_TRADING_CONFIG = {
     "technical_rsi_max": 80.0,
     "technical_volume_ratio_min": 0.8,
     "technical_ma5_tolerance": 0.98,
-    "technical_volatility_min": 0.2
+    "technical_volatility_min": 0.2,
+    # 情绪融合配置
+    "sentiment_fusion_enabled": False,
+    "sentiment_fusion_mode": "free"
 }
 
 
@@ -865,18 +738,55 @@ def save_smart_trading_config_file(config: dict):
     os.environ["PYRAMID_ON_STOP_LOSS_TREND_SCORE"] = str(config.get("pyramid_on_stop_loss_trend_score", 8))
     os.environ["PYRAMID_ON_STOP_LOSS_MAX_POSITION_PERCENT"] = str(config.get("pyramid_on_stop_loss_max_position_percent", 15.0))
     os.environ["PYRAMID_ON_STOP_LOSS_MIN_CASH"] = str(config.get("pyramid_on_stop_loss_min_cash", 25.0))
-    os.environ["SMART_STOP_LOSS_ENABLED"] = str(config["smart_stop_loss_enabled"])
-    os.environ["STOP_LOSS_TREND_8_PLUS"] = str(config["stop_loss_trend_8_plus"])
-    os.environ["STOP_LOSS_TREND_6_7"] = str(config["stop_loss_trend_6_7"])
-    os.environ["STOP_LOSS_TREND_DEFAULT"] = str(config["stop_loss_trend_default"])
-    os.environ["STOP_LOSS_TIME_PROTECTION_MINUTES"] = str(config["stop_loss_time_protection_minutes"])
-    os.environ["DYNAMIC_TAKE_PROFIT_ENABLED"] = str(config["dynamic_take_profit_enabled"])
-    os.environ["TAKE_PROFIT_TREND_9_10"] = str(config["take_profit_trend_9_10"])
-    os.environ["TAKE_PROFIT_TREND_7_8"] = str(config["take_profit_trend_7_8"])
-    os.environ["TAKE_PROFIT_TREND_5_6"] = str(config["take_profit_trend_5_6"])
-    os.environ["TAKE_PROFIT_TREND_DEFAULT"] = str(config["take_profit_trend_default"])
-    os.environ["PARTIAL_TAKE_PROFIT_PERCENT"] = str(config["partial_take_profit_percent"])
-    
+    # 做多智能止损配置
+    os.environ["LONG_SMART_STOP_LOSS_ENABLED"] = str(config.get("long_smart_stop_loss_enabled", True))
+    os.environ["LONG_STOP_LOSS_TREND_8_PLUS"] = str(config.get("long_stop_loss_trend_8_plus", 3.0))
+    os.environ["LONG_STOP_LOSS_TREND_6_7"] = str(config.get("long_stop_loss_trend_6_7", 2.0))
+    os.environ["LONG_STOP_LOSS_TREND_DEFAULT"] = str(config.get("long_stop_loss_trend_default", 1.5))
+    # 做多动态止盈配置
+    os.environ["LONG_DYNAMIC_TAKE_PROFIT_ENABLED"] = str(config.get("long_dynamic_take_profit_enabled", True))
+    os.environ["LONG_TAKE_PROFIT_TREND_9_10"] = str(config.get("long_take_profit_trend_9_10", 15.0))
+    os.environ["LONG_TAKE_PROFIT_TREND_7_8"] = str(config.get("long_take_profit_trend_7_8", 10.0))
+    os.environ["LONG_TAKE_PROFIT_TREND_5_6"] = str(config.get("long_take_profit_trend_5_6", 8.0))
+    os.environ["LONG_TAKE_PROFIT_TREND_DEFAULT"] = str(config.get("long_take_profit_trend_default", 6.0))
+    # 做空智能止损配置
+    os.environ["SHORT_SMART_STOP_LOSS_ENABLED"] = str(config.get("short_smart_stop_loss_enabled", True))
+    os.environ["SHORT_STOP_LOSS_TREND_0_2"] = str(config.get("short_stop_loss_trend_0_2", 3.0))
+    os.environ["SHORT_STOP_LOSS_TREND_3_4"] = str(config.get("short_stop_loss_trend_3_4", 2.0))
+    os.environ["SHORT_STOP_LOSS_TREND_DEFAULT"] = str(config.get("short_stop_loss_trend_default", 1.5))
+    # 做空动态止盈配置
+    os.environ["SHORT_DYNAMIC_TAKE_PROFIT_ENABLED"] = str(config.get("short_dynamic_take_profit_enabled", True))
+    os.environ["SHORT_TAKE_PROFIT_TREND_0_1"] = str(config.get("short_take_profit_trend_0_1", 15.0))
+    os.environ["SHORT_TAKE_PROFIT_TREND_2_3"] = str(config.get("short_take_profit_trend_2_3", 10.0))
+    os.environ["SHORT_TAKE_PROFIT_TREND_4"] = str(config.get("short_take_profit_trend_4", 8.0))
+    os.environ["SHORT_TAKE_PROFIT_TREND_DEFAULT"] = str(config.get("short_take_profit_trend_default", 6.0))
+    # 时间衰减配置
+    os.environ["TIME_DECAY_ENABLED"] = str(config.get("time_decay_enabled", True))
+    os.environ["TIME_DECAY_FACTOR"] = str(config.get("time_decay_factor", 0.1))
+    # 做多小盈减仓配置
+    os.environ["LONG_SMALL_PROFIT_REDUCE_ENABLED"] = str(config.get("long_small_profit_reduce_enabled", True))
+    os.environ["LONG_SMALL_PROFIT_REDUCE_THRESHOLD_PERCENT"] = str(config.get("long_small_profit_reduce_threshold_percent", 50.0))
+    os.environ["LONG_SMALL_PROFIT_REDUCE_POSITION_THRESHOLD"] = str(config.get("long_small_profit_reduce_position_threshold", 15.0))
+    os.environ["LONG_SMALL_PROFIT_REDUCE_RATIO"] = str(config.get("long_small_profit_reduce_ratio", 50.0))
+    # 做空小盈减仓配置
+    os.environ["SHORT_SMALL_PROFIT_REDUCE_ENABLED"] = str(config.get("short_small_profit_reduce_enabled", True))
+    os.environ["SHORT_SMALL_PROFIT_REDUCE_THRESHOLD_PERCENT"] = str(config.get("short_small_profit_reduce_threshold_percent", 50.0))
+    os.environ["SHORT_SMALL_PROFIT_REDUCE_POSITION_THRESHOLD"] = str(config.get("short_small_profit_reduce_position_threshold", 15.0))
+    os.environ["SHORT_SMALL_PROFIT_REDUCE_RATIO"] = str(config.get("short_small_profit_reduce_ratio", 50.0))
+    # 做多分层减仓止盈配置
+    os.environ["LONG_BAND_TRADE_ENABLED"] = str(config.get("long_band_trade_enabled", True))
+    os.environ["LONG_BAND_TRADE_REDUCE_AT"] = str(config.get("long_band_trade_reduce_at", 1.5))
+    os.environ["LONG_BAND_TRADE_REDUCE_PERCENT"] = str(config.get("long_band_trade_reduce_percent", 30.0))
+    os.environ["LONG_BAND_TRADE_SECOND_REDUCE_AT"] = str(config.get("long_band_trade_second_reduce_at", 3.0))
+    os.environ["LONG_BAND_TRADE_SECOND_REDUCE_PERCENT"] = str(config.get("long_band_trade_second_reduce_percent", 50.0))
+    os.environ["LONG_BAND_TRADE_FINAL_REDUCE_AT"] = str(config.get("long_band_trade_final_reduce_at", 6.0))
+    # 做空分层减仓止盈配置
+    os.environ["SHORT_BAND_TRADE_ENABLED"] = str(config.get("short_band_trade_enabled", True))
+    os.environ["SHORT_BAND_TRADE_REDUCE_AT"] = str(config.get("short_band_trade_reduce_at", 1.5))
+    os.environ["SHORT_BAND_TRADE_REDUCE_PERCENT"] = str(config.get("short_band_trade_reduce_percent", 30.0))
+    os.environ["SHORT_BAND_TRADE_SECOND_REDUCE_AT"] = str(config.get("short_band_trade_second_reduce_at", 3.0))
+    os.environ["SHORT_BAND_TRADE_SECOND_REDUCE_PERCENT"] = str(config.get("short_band_trade_second_reduce_percent", 50.0))
+    os.environ["SHORT_BAND_TRADE_FINAL_REDUCE_AT"] = str(config.get("short_band_trade_final_reduce_at", 6.0))
     # 技术面验证配置
     os.environ["TECHNICAL_VALIDATION_ENABLED"] = str(config.get("technical_validation_enabled", True))
     os.environ["TECHNICAL_MIN_PASS_COUNT"] = str(config.get("technical_min_pass_count", 2))
@@ -886,6 +796,9 @@ def save_smart_trading_config_file(config: dict):
     os.environ["TECHNICAL_VOLUME_RATIO_MIN"] = str(config.get("technical_volume_ratio_min", 0.8))
     os.environ["TECHNICAL_MA5_TOLERANCE"] = str(config.get("technical_ma5_tolerance", 0.98))
     os.environ["TECHNICAL_VOLATILITY_MIN"] = str(config.get("technical_volatility_min", 0.2))
+    # 情绪融合配置
+    os.environ["SENTIMENT_FUSION_ENABLED"] = str(config.get("sentiment_fusion_enabled", False))
+    os.environ["SENTIMENT_FUSION_MODE"] = str(config.get("sentiment_fusion_mode", "free"))
 
     # 更新 simulation_manager 的配置（需要重新加载）
     from app.services.simulation_manager import simulation_manager
@@ -905,26 +818,9 @@ def save_smart_trading_config_file(config: dict):
     settings.PYRAMID_ON_STOP_LOSS_TREND_SCORE = config.get("pyramid_on_stop_loss_trend_score", 8)
     settings.PYRAMID_ON_STOP_LOSS_MAX_POSITION_PERCENT = config.get("pyramid_on_stop_loss_max_position_percent", 15.0)
     settings.PYRAMID_ON_STOP_LOSS_MIN_CASH = config.get("pyramid_on_stop_loss_min_cash", 25.0)
-    settings.SMART_STOP_LOSS_ENABLED = config["smart_stop_loss_enabled"]
-    settings.STOP_LOSS_TREND_8_PLUS = config["stop_loss_trend_8_plus"]
-    settings.STOP_LOSS_TREND_6_7 = config["stop_loss_trend_6_7"]
-    settings.STOP_LOSS_TREND_DEFAULT = config["stop_loss_trend_default"]
-    settings.STOP_LOSS_TIME_PROTECTION_MINUTES = config["stop_loss_time_protection_minutes"]
-    settings.DYNAMIC_TAKE_PROFIT_ENABLED = config["dynamic_take_profit_enabled"]
-    settings.TAKE_PROFIT_TREND_9_10 = config["take_profit_trend_9_10"]
-    settings.TAKE_PROFIT_TREND_7_8 = config["take_profit_trend_7_8"]
-    settings.TAKE_PROFIT_TREND_5_6 = config["take_profit_trend_5_6"]
-    settings.TAKE_PROFIT_TREND_DEFAULT = config["take_profit_trend_default"]
-    settings.PARTIAL_TAKE_PROFIT_PERCENT = config["partial_take_profit_percent"]
-    # 技术面验证配置
-    settings.TECHNICAL_VALIDATION_ENABLED = config.get("technical_validation_enabled", True)
-    settings.TECHNICAL_MIN_PASS_COUNT = config.get("technical_min_pass_count", 2)
-    settings.TECHNICAL_TREND_SCORE_THRESHOLD = config.get("technical_trend_score_threshold", 5)
-    settings.TECHNICAL_RSI_MIN = config.get("technical_rsi_min", 30.0)
-    settings.TECHNICAL_RSI_MAX = config.get("technical_rsi_max", 80.0)
-    settings.TECHNICAL_VOLUME_RATIO_MIN = config.get("technical_volume_ratio_min", 0.8)
-    settings.TECHNICAL_MA5_TOLERANCE = config.get("technical_ma5_tolerance", 0.98)
-    settings.TECHNICAL_VOLATILITY_MIN = config.get("technical_volatility_min", 0.2)
+    # 情绪融合配置
+    settings.SENTIMENT_FUSION_ENABLED = config.get("sentiment_fusion_enabled", False)
+    settings.SENTIMENT_FUSION_MODE = config.get("sentiment_fusion_mode", "free")
 
 
 @router.get("/config/smart-trading")
@@ -943,7 +839,6 @@ async def update_smart_trading_config(config: dict):
     from app.services.trading_engine import trading_engine
     
     _direct_attrs = [
-        'smart_stop_loss_enabled',
         'cooldown_score_tier1', 'cooldown_score_tier2', 'cooldown_score_tier3',
         'position_percent_score_tier1', 'position_percent_score_tier2', 'position_percent_score_tier3',
         'take_profit_score_tier1', 'take_profit_score_tier2', 'take_profit_score_tier3',
@@ -982,81 +877,109 @@ async def update_smart_trading_config(config: dict):
             chat_id=feishu_chat_id
         )
 
-    if "stop_loss_trend_8_plus" in config:
-        trading_engine.config.stop_loss_trend_8_plus = config["stop_loss_trend_8_plus"]
-    if "stop_loss_trend_6_7" in config:
-        trading_engine.config.stop_loss_trend_6_7 = config["stop_loss_trend_6_7"]
-    if "stop_loss_trend_default" in config:
-        trading_engine.config.stop_loss_trend_default = config["stop_loss_trend_default"]
-    if "stop_loss_time_protection_enabled" in config:
-        trading_engine.config.stop_loss_time_protection_enabled = config["stop_loss_time_protection_enabled"]
-    if "stop_loss_time_protection_minutes" in config:
-        trading_engine.config.stop_loss_time_protection_minutes = config["stop_loss_time_protection_minutes"]
+    # 做多智能止损配置
+    if "long_smart_stop_loss_enabled" in config:
+        trading_engine.config.long_smart_stop_loss_enabled = config["long_smart_stop_loss_enabled"]
+    if "long_stop_loss_trend_8_plus" in config:
+        trading_engine.config.long_stop_loss_trend_8_plus = config["long_stop_loss_trend_8_plus"]
+    if "long_stop_loss_trend_6_7" in config:
+        trading_engine.config.long_stop_loss_trend_6_7 = config["long_stop_loss_trend_6_7"]
+    if "long_stop_loss_trend_default" in config:
+        trading_engine.config.long_stop_loss_trend_default = config["long_stop_loss_trend_default"]
 
-    if "dynamic_take_profit_enabled" in config:
-        trading_engine.config.dynamic_take_profit_enabled = config["dynamic_take_profit_enabled"]
-    if "take_profit_trend_9_10" in config:
-        trading_engine.config.take_profit_trend_9_10 = config["take_profit_trend_9_10"]
-    if "take_profit_trend_7_8" in config:
-        trading_engine.config.take_profit_trend_7_8 = config["take_profit_trend_7_8"]
-    if "take_profit_trend_5_6" in config:
-        trading_engine.config.take_profit_trend_5_6 = config["take_profit_trend_5_6"]
-    if "take_profit_trend_default" in config:
-        trading_engine.config.take_profit_trend_default = config["take_profit_trend_default"]
-    if "partial_take_profit_percent" in config:
-        trading_engine.config.partial_take_profit_percent = config["partial_take_profit_percent"]
+    # 做多动态止盈配置
+    if "long_dynamic_take_profit_enabled" in config:
+        trading_engine.config.long_dynamic_take_profit_enabled = config["long_dynamic_take_profit_enabled"]
+    if "long_take_profit_trend_9_10" in config:
+        trading_engine.config.long_take_profit_trend_9_10 = config["long_take_profit_trend_9_10"]
+    if "long_take_profit_trend_7_8" in config:
+        trading_engine.config.long_take_profit_trend_7_8 = config["long_take_profit_trend_7_8"]
+    if "long_take_profit_trend_5_6" in config:
+        trading_engine.config.long_take_profit_trend_5_6 = config["long_take_profit_trend_5_6"]
+    if "long_take_profit_trend_default" in config:
+        trading_engine.config.long_take_profit_trend_default = config["long_take_profit_trend_default"]
 
+    # 做空智能止损配置
+    if "short_smart_stop_loss_enabled" in config:
+        trading_engine.config.short_smart_stop_loss_enabled = config["short_smart_stop_loss_enabled"]
+    if "short_stop_loss_trend_0_2" in config:
+        trading_engine.config.short_stop_loss_trend_0_2 = config["short_stop_loss_trend_0_2"]
+    if "short_stop_loss_trend_3_4" in config:
+        trading_engine.config.short_stop_loss_trend_3_4 = config["short_stop_loss_trend_3_4"]
+    if "short_stop_loss_trend_default" in config:
+        trading_engine.config.short_stop_loss_trend_default = config["short_stop_loss_trend_default"]
+
+    # 做空动态止盈配置
+    if "short_dynamic_take_profit_enabled" in config:
+        trading_engine.config.short_dynamic_take_profit_enabled = config["short_dynamic_take_profit_enabled"]
+    if "short_take_profit_trend_0_1" in config:
+        trading_engine.config.short_take_profit_trend_0_1 = config["short_take_profit_trend_0_1"]
+    if "short_take_profit_trend_2_3" in config:
+        trading_engine.config.short_take_profit_trend_2_3 = config["short_take_profit_trend_2_3"]
+    if "short_take_profit_trend_4" in config:
+        trading_engine.config.short_take_profit_trend_4 = config["short_take_profit_trend_4"]
+    if "short_take_profit_trend_default" in config:
+        trading_engine.config.short_take_profit_trend_default = config["short_take_profit_trend_default"]
+
+    # 时间衰减配置
     if "time_decay_enabled" in config:
         trading_engine.config.time_decay_enabled = config["time_decay_enabled"]
     if "time_decay_factor" in config:
         trading_engine.config.time_decay_factor = config["time_decay_factor"]
 
-    if "small_profit_reduce_enabled" in config:
-        trading_engine.config.small_profit_reduce_enabled = config["small_profit_reduce_enabled"]
-    if "small_profit_reduce_threshold_percent" in config:
-        trading_engine.config.small_profit_reduce_threshold_percent = config["small_profit_reduce_threshold_percent"]
-    if "small_profit_reduce_position_threshold" in config:
-        trading_engine.config.small_profit_reduce_position_threshold = config["small_profit_reduce_position_threshold"]
+    # 做多小盈减仓配置
+    if "long_small_profit_reduce_enabled" in config:
+        trading_engine.config.long_small_profit_reduce_enabled = config["long_small_profit_reduce_enabled"]
+    if "long_small_profit_reduce_threshold_percent" in config:
+        trading_engine.config.long_small_profit_reduce_threshold_percent = config["long_small_profit_reduce_threshold_percent"]
+    if "long_small_profit_reduce_position_threshold" in config:
+        trading_engine.config.long_small_profit_reduce_position_threshold = config["long_small_profit_reduce_position_threshold"]
+    if "long_small_profit_reduce_ratio" in config:
+        trading_engine.config.long_small_profit_reduce_ratio = config["long_small_profit_reduce_ratio"]
 
-    if "over_position_reduce_enabled" in config:
-        trading_engine.config.over_position_reduce_enabled = config["over_position_reduce_enabled"]
-    if "over_position_reduce_threshold" in config:
-        trading_engine.config.over_position_reduce_threshold = config["over_position_reduce_threshold"]
-    if "over_position_reduce_target" in config:
-        trading_engine.config.over_position_reduce_target = config["over_position_reduce_target"]
+    # 做空小盈减仓配置
+    if "short_small_profit_reduce_enabled" in config:
+        trading_engine.config.short_small_profit_reduce_enabled = config["short_small_profit_reduce_enabled"]
+    if "short_small_profit_reduce_threshold_percent" in config:
+        trading_engine.config.short_small_profit_reduce_threshold_percent = config["short_small_profit_reduce_threshold_percent"]
+    if "short_small_profit_reduce_position_threshold" in config:
+        trading_engine.config.short_small_profit_reduce_position_threshold = config["short_small_profit_reduce_position_threshold"]
+    if "short_small_profit_reduce_ratio" in config:
+        trading_engine.config.short_small_profit_reduce_ratio = config["short_small_profit_reduce_ratio"]
 
-    if "over_position_exemption_enabled" in config:
-        trading_engine.config.over_position_exemption_enabled = config["over_position_exemption_enabled"]
-    if "exemption_loss_high_minutes" in config:
-        trading_engine.config.exemption_loss_high_minutes = config["exemption_loss_high_minutes"]
-    if "exemption_loss_medium_minutes" in config:
-        trading_engine.config.exemption_loss_medium_minutes = config["exemption_loss_medium_minutes"]
-    if "exemption_profit_minutes" in config:
-        trading_engine.config.exemption_profit_minutes = config["exemption_profit_minutes"]
+    # 做多分层减仓止盈配置
+    if "long_band_trade_enabled" in config:
+        trading_engine.config.long_band_trade_enabled = config["long_band_trade_enabled"]
+    if "long_band_trade_reduce_at" in config:
+        trading_engine.config.long_band_trade_reduce_at = config["long_band_trade_reduce_at"]
+    if "long_band_trade_reduce_percent" in config:
+        trading_engine.config.long_band_trade_reduce_percent = config["long_band_trade_reduce_percent"]
+    if "long_band_trade_second_reduce_at" in config:
+        trading_engine.config.long_band_trade_second_reduce_at = config["long_band_trade_second_reduce_at"]
+    if "long_band_trade_second_reduce_percent" in config:
+        trading_engine.config.long_band_trade_second_reduce_percent = config["long_band_trade_second_reduce_percent"]
+    if "long_band_trade_final_reduce_at" in config:
+        trading_engine.config.long_band_trade_final_reduce_at = config["long_band_trade_final_reduce_at"]
 
-    if "band_trade_enabled" in config:
-        trading_engine.config.band_trade_enabled = config["band_trade_enabled"]
-    if "band_trade_reduce_at" in config:
-        trading_engine.config.band_trade_reduce_at = config["band_trade_reduce_at"]
-    if "band_trade_second_reduce_at" in config:
-        trading_engine.config.band_trade_second_reduce_at = config["band_trade_second_reduce_at"]
-    if "band_trade_final_reduce_at" in config:
-        trading_engine.config.band_trade_final_reduce_at = config["band_trade_final_reduce_at"]
-    if "band_trade_reduce_percent" in config:
-        trading_engine.config.band_trade_reduce_percent = config["band_trade_reduce_percent"]
-    if "band_trade_second_reduce_percent" in config:
-        trading_engine.config.band_trade_second_reduce_percent = config["band_trade_second_reduce_percent"]
-    if "band_trade_buy_back_at" in config:
-        trading_engine.config.band_trade_buy_back_at = config["band_trade_buy_back_at"]
+    # 做空分层减仓止盈配置
+    if "short_band_trade_enabled" in config:
+        trading_engine.config.short_band_trade_enabled = config["short_band_trade_enabled"]
+    if "short_band_trade_reduce_at" in config:
+        trading_engine.config.short_band_trade_reduce_at = config["short_band_trade_reduce_at"]
+    if "short_band_trade_reduce_percent" in config:
+        trading_engine.config.short_band_trade_reduce_percent = config["short_band_trade_reduce_percent"]
+    if "short_band_trade_second_reduce_at" in config:
+        trading_engine.config.short_band_trade_second_reduce_at = config["short_band_trade_second_reduce_at"]
+    if "short_band_trade_second_reduce_percent" in config:
+        trading_engine.config.short_band_trade_second_reduce_percent = config["short_band_trade_second_reduce_percent"]
+    if "short_band_trade_final_reduce_at" in config:
+        trading_engine.config.short_band_trade_final_reduce_at = config["short_band_trade_final_reduce_at"]
 
-    if "pyramid_on_stop_loss_enabled" in config:
-        trading_engine.config.pyramid_on_stop_loss_enabled = config["pyramid_on_stop_loss_enabled"]
-    if "pyramid_on_stop_loss_trend_score" in config:
-        trading_engine.config.pyramid_on_stop_loss_trend_score = config["pyramid_on_stop_loss_trend_score"]
-    if "pyramid_on_stop_loss_max_position_percent" in config:
-        trading_engine.config.pyramid_on_stop_loss_max_position_percent = config["pyramid_on_stop_loss_max_position_percent"]
-    if "pyramid_on_stop_loss_min_cash" in config:
-        trading_engine.config.pyramid_on_stop_loss_min_cash = config["pyramid_on_stop_loss_min_cash"]
+    # 超仓减仓配置
+    if "sentiment_fusion_enabled" in config:
+        trading_engine.config.sentiment_fusion_enabled = config["sentiment_fusion_enabled"]
+    if "sentiment_fusion_mode" in config:
+        trading_engine.config.sentiment_fusion_mode = config["sentiment_fusion_mode"]
 
     return {"success": True, "config": config}
 
@@ -1399,10 +1322,7 @@ async def update_sparrow_config(config: dict):
     with open(SPARROW_CONFIG_FILE, "w", encoding="utf-8") as f:
         json.dump(config, f, indent=2, ensure_ascii=False)
 
-    # 更新时区感知开关
-    if "timezone_aware_enabled" in config:
-        sparrow_config.timezone_aware_enabled = config["timezone_aware_enabled"]
-
+    
     # 更新检查频率配置
     if "check_interval" in config:
         ci = config["check_interval"]
@@ -1571,3 +1491,178 @@ async def update_sparrow_config(config: dict):
                 trading_engine.config.short_exemption_profit = se["short_exemption_profit"]
 
     return {"success": True, "config": config}
+
+
+# ==================== AI策略迭代 API ====================
+
+@router.get("/ai/health")
+async def check_ai_health():
+    """检查LM Studio连接状态"""
+    from app.services.ai_strategy_advisor import ai_strategy_advisor
+    connected = await ai_strategy_advisor.health_check()
+    return {"connected": connected}
+
+
+@router.get("/evolution/ai-config")
+async def get_ai_evolution_config():
+    """获取AI迭代配置"""
+    return {
+        "ai_evolution_enabled": strategy_evolution.config.ai_evolution_enabled,
+        "ai_evolution_auto_apply": strategy_evolution.config.ai_evolution_auto_apply,
+        "ai_evolution_min_trades": strategy_evolution.config.ai_evolution_min_trades,
+        "ai_evolution_interval_hours": strategy_evolution.config.ai_evolution_interval_hours,
+        "ai_evolution_confidence_threshold": strategy_evolution.config.ai_evolution_confidence_threshold,
+        "last_ai_analysis": strategy_evolution.log.last_ai_analysis,
+        "pending_suggestions_count": len(strategy_evolution.get_pending_suggestions())
+    }
+
+
+@router.post("/evolution/ai-config")
+async def update_ai_evolution_config(config: dict):
+    """更新AI迭代配置"""
+    strategy_evolution.update_ai_config(
+        enabled=config.get("ai_evolution_enabled"),
+        auto_apply=config.get("ai_evolution_auto_apply"),
+        min_trades=config.get("ai_evolution_min_trades"),
+        interval_hours=config.get("ai_evolution_interval_hours"),
+        confidence_threshold=config.get("ai_evolution_confidence_threshold")
+    )
+    return {"success": True, "config": config}
+
+
+@router.post("/evolution/ai-analyze")
+async def ai_analyze_strategy(side: str = "long"):
+    """AI分析交易数据，给出策略建议"""
+    from app.services.ai_strategy_advisor import ai_strategy_advisor
+    from app.services.trade_stats import trade_stats
+    from app.services.trading_engine import trading_engine
+    
+    trades = trade_stats.trade_log.trades
+    if not trades:
+        return {"success": False, "message": "没有交易数据"}
+    
+    config = trading_engine.config
+    current_params = {
+        "stop_loss": config.long_stop_loss_percent if side == "long" else config.short_stop_loss_percent,
+        "take_profit": config.long_take_profit_percent if side == "long" else config.short_take_profit_percent,
+        "trade_size": config.long_position_size if side == "long" else config.short_position_size,
+        "sentiment_threshold": config.sentiment_threshold,
+        "max_positions": config.long_max_positions if side == "long" else config.short_max_positions,
+        "stop_loss_suggestion": {
+            "enabled": config.long_smart_stop_loss_enabled if side == "long" else config.short_smart_stop_loss_enabled,
+            "trend_8_plus": config.long_stop_loss_trend_8_plus if side == "long" else None,
+            "trend_6_7": config.long_stop_loss_trend_6_7 if side == "long" else None,
+            "trend_0_2": config.short_stop_loss_trend_0_2 if side == "short" else None,
+            "trend_3_4": config.short_stop_loss_trend_3_4 if side == "short" else None,
+            "trend_default": config.long_stop_loss_trend_default if side == "long" else config.short_stop_loss_trend_default
+        },
+        "take_profit_suggestion": {
+            "enabled": config.long_dynamic_take_profit_enabled if side == "long" else config.short_dynamic_take_profit_enabled,
+            "trend_9_10": config.long_take_profit_trend_9_10 if side == "long" else None,
+            "trend_7_8": config.long_take_profit_trend_7_8 if side == "long" else None,
+            "trend_5_6": config.long_take_profit_trend_5_6 if side == "long" else None,
+            "trend_0_1": config.short_take_profit_trend_0_1 if side == "short" else None,
+            "trend_2_3": config.short_take_profit_trend_2_3 if side == "short" else None,
+            "trend_4": config.short_take_profit_trend_4 if side == "short" else None,
+            "trend_default": config.long_take_profit_trend_default if side == "long" else config.short_take_profit_trend_default
+        },
+        "band_trade_suggestion": {
+            "enabled": config.long_band_trade_enabled if side == "long" else config.short_band_trade_enabled,
+            "reduce_at": config.long_band_trade_reduce_at if side == "long" else config.short_band_trade_reduce_at,
+            "reduce_percent": config.long_band_trade_reduce_percent if side == "long" else config.short_band_trade_reduce_percent,
+            "second_reduce_at": config.long_band_trade_second_reduce_at if side == "long" else config.short_band_trade_second_reduce_at,
+            "second_reduce_percent": config.long_band_trade_second_reduce_percent if side == "long" else config.short_band_trade_second_reduce_percent,
+            "final_reduce_at": config.long_band_trade_final_reduce_at if side == "long" else config.short_band_trade_final_reduce_at
+        },
+        "small_profit_suggestion": {
+            "enabled": config.long_small_profit_reduce_enabled if side == "long" else config.short_small_profit_reduce_enabled,
+            "threshold_percent": config.long_small_profit_reduce_threshold_percent if side == "long" else config.short_small_profit_reduce_threshold_percent,
+            "position_threshold": config.long_small_profit_reduce_position_threshold if side == "long" else config.short_small_profit_reduce_position_threshold,
+            "reduce_ratio": config.long_small_profit_reduce_ratio if side == "long" else config.short_small_profit_reduce_ratio
+        }
+    }
+    
+    performance = strategy_evolution.analyze_performance(trades, side)
+    
+    suggestion = await ai_strategy_advisor.analyze_performance(
+        trades, 
+        performance or {}, 
+        current_params,
+        side
+    )
+    
+    if not suggestion:
+        return {"success": False, "message": "AI未能生成建议"}
+    
+    return {
+        "success": True,
+        "side": side,
+        "performance": performance,
+        "suggestion": suggestion.model_dump()
+    }
+
+
+@router.post("/evolution/apply-ai")
+async def apply_ai_suggestion(side: str = "long"):
+    """应用AI建议到策略参数"""
+    from app.services.ai_strategy_advisor import ai_strategy_advisor
+    from app.services.trade_stats import trade_stats
+    from app.services.trading_engine import trading_engine
+    
+    trades = trade_stats.trade_log.trades
+    config = trading_engine.config
+    
+    current_params = {
+        "stop_loss": config.long_stop_loss_percent if side == "long" else config.short_stop_loss_percent,
+        "take_profit": config.long_take_profit_percent if side == "long" else config.short_take_profit_percent,
+        "trade_size": config.long_position_size if side == "long" else config.short_position_size,
+        "sentiment_threshold": config.sentiment_threshold,
+        "max_positions": config.long_max_positions if side == "long" else config.short_max_positions
+    }
+    
+    performance = strategy_evolution.analyze_performance(trades, side)
+    
+    suggestion = await ai_strategy_advisor.analyze_performance(
+        trades,
+        performance or {},
+        current_params,
+        side
+    )
+    
+    if not suggestion:
+        return {"success": False, "message": "AI未能生成建议"}
+    
+    await strategy_evolution._apply_ai_suggestion(suggestion, side)
+    
+    return {
+        "success": True,
+        "side": side,
+        "suggestion": suggestion.model_dump(),
+        "message": f"AI建议已应用到{side}策略参数"
+    }
+
+
+@router.post("/evolution/apply-pending")
+async def apply_pending_suggestion(suggestion_id: str):
+    """应用待确认的AI建议"""
+    success = await strategy_evolution.apply_pending_suggestion(suggestion_id)
+    if success:
+        return {"success": True, "message": "AI建议已应用"}
+    else:
+        return {"success": False, "message": "未找到该建议或已应用"}
+
+
+@router.get("/evolution/pending-suggestions")
+async def get_pending_suggestions():
+    """获取待确认的AI建议列表"""
+    suggestions = strategy_evolution.get_pending_suggestions()
+    return {
+        "success": True,
+        "suggestions": [s.model_dump() for s in suggestions]
+    }
+
+
+@router.get("/evolution/status")
+async def get_evolution_status():
+    """获取策略迭代状态"""
+    return strategy_evolution.get_status()

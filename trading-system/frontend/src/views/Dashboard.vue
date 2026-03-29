@@ -97,7 +97,6 @@
         </div>
         <CoordinatorCard />
         <div class="bottom-cards">
-          <StrategyEvolutionCard />
           <div class="vertical-cards">
             <MarketScanCard />
             <EmergencyStopCard />
@@ -146,7 +145,6 @@ import EmergencyStopCard from '@/components/EmergencyStopCard.vue'
 import MarketScanCard from '@/components/MarketScanCard.vue'
 import SidewaysStatusCard from '@/components/SidewaysStatusCard.vue'
 import BlacklistCard from '@/components/BlacklistCard.vue'
-import StrategyEvolutionCard from '@/components/StrategyEvolutionCard.vue'
 import GridTradingCard from '@/components/GridTradingCard.vue'
 import PositionsDetailCard from '@/components/PositionsDetailCard.vue'
 import TradesHistoryCard from '@/components/TradesHistoryCard.vue'

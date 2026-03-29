@@ -137,10 +137,10 @@
             <span class="log-title">📝 活动日志</span>
             <div class="log-filters">
               <el-select v-model="selectedCycle" size="small" clearable placeholder="选择周期" style="width: 220px">
-                <el-option :label="`最新 (${cycleLogs[cycleLogs.length-1]?.startTime || '无'})`" :value="0" />
+                <el-option :label="`最新 (${cycleLogs[cycleLogs.length-1]?.startTime || '无'})`" :value="'latest'" />
                 <el-option
                   v-for="c in recentCycles"
-                  :key="c.cycle"
+                  :key="`cycle-${c.cycle}`"
                   :label="c.startTime"
                   :value="c.cycle"
                 />
@@ -364,7 +364,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, nextTick, computed } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Search, Position, Bottom, Top, Download, Delete, Clock, Close } from '@element-plus/icons-vue'
+import { Search, Position, Bottom, Top, Download, Delete, Clock, Close, QuestionFilled } from '@element-plus/icons-vue'
 
 interface CoordinatorStatus {
   is_running: boolean
@@ -401,13 +401,12 @@ const status = ref<CoordinatorStatus>({
   trading_enabled: false
 })
 const loading = ref(false)
-const intervalMinutes = ref(5)
 const dryRun = ref(true)
 const cycleResult = ref<any>(null)
 const activityLogs = ref<ActivityLog[]>([])
 const cycleLogs = ref<CycleLog[]>([])
 const currentCycle = ref<number>(0)
-const selectedCycle = ref<number>(0)
+const selectedCycle = ref<number | string>('latest')
 const logContainer = ref<HTMLElement | null>(null)
 let pollInterval: number | null = null
 const autoScroll = ref(true)
@@ -433,10 +432,10 @@ const lastCycle = computed(() => {
 const filteredLogs = computed(() => {
   let logs = activityLogs.value
 
-  const effectiveCycle = selectedCycle.value === 0 ? lastCycle.value : selectedCycle.value
+  const effectiveCycle = selectedCycle.value === 'latest' ? lastCycle.value : selectedCycle.value
 
-  if (effectiveCycle > 0) {
-    logs = logs.filter(log => log.cycle === effectiveCycle)
+  if (effectiveCycle && effectiveCycle !== 'latest' && Number(effectiveCycle) > 0) {
+    logs = logs.filter(log => log.cycle === Number(effectiveCycle))
   }
 
   // 时间范围筛选

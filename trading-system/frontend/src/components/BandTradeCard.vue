@@ -7,7 +7,7 @@
         </div>
         <div class="title-section">
           <div class="card-title">波段操作</div>
-          <div class="card-subtitle">分批止盈与回调加仓</div>
+          <div class="card-subtitle">回调加仓与移动止损</div>
         </div>
       </div>
       <div class="header-actions">
@@ -15,15 +15,9 @@
       </div>
     </div>
     
-    <div class="config-section">
-      <div class="section-title">分层止盈配置</div>
-      <div class="levels-list">
-        <div v-for="(level, index) in config.take_profit_levels" :key="index" class="level-item">
-          <span class="level-name">第{{ index + 1 }}层</span>
-          <span class="level-trigger">触发: +{{ level.trigger_percent }}%</span>
-          <span class="level-sell">卖出: {{ level.sell_percent }}%</span>
-        </div>
-      </div>
+    <div class="config-tip" style="margin-bottom: 16px;">
+      <span class="tip-icon">💡</span>
+      <span>分层止盈配置已整合到策略配置页的"止盈止损"中，此处仅保留回调加仓和移动止损配置</span>
     </div>
     
     <div class="config-section">

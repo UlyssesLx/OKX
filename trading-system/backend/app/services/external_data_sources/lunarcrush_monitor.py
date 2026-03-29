@@ -37,7 +37,8 @@ class LunarCrushMonitor:
         self.cache_file = os.path.join(cache_dir, "lunarcrush_cache.json")
         os.makedirs(cache_dir, exist_ok=True)
         
-        # LunarCrush API凭证
+        # LunarCrush 配置
+        self.enabled = getattr(settings, 'ENABLE_LUNARCRUSH_MONITOR', False)
         self.api_key = getattr(settings, 'LUNARCRUSH_API_KEY', '')
         self.base_url = 'https://api.lunarcrush.com/v2'
         
@@ -45,6 +46,13 @@ class LunarCrushMonitor:
         self.CACHE_DURATION = 5 * 60 * 1000  # 5分钟
         
         self._load_cache()
+        
+        if self.enabled and self.api_key:
+            logger.info("✅ LunarCrush 社交情绪监控已启用")
+        elif self.enabled and not self.api_key:
+            logger.warning("⚠️ LunarCrush 已启用但未配置 API Key")
+        else:
+            logger.info("ℹ️ LunarCrush 社交情绪监控未启用")
     
     def _load_cache(self):
         """加载缓存"""
@@ -95,6 +103,11 @@ class LunarCrushMonitor:
     
     async def get_social_sentiment(self, coin: str) -> Optional[LunarCrushSentiment]:
         """获取币种社交媒体情绪"""
+        # 检查是否启用
+        if not self.enabled:
+            logger.debug(f"LunarCrush 监控未启用，跳过 {coin}")
+            return None
+        
         # 检查缓存
         if coin in self.cache:
             cache_data = self.cache[coin]

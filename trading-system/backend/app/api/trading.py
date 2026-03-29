@@ -362,7 +362,61 @@ async def get_long_config():
         "pyramidOnStopLossEnabled": config.pyramid_on_stop_loss_enabled,
         "pyramidOnStopLossTrendScore": config.pyramid_on_stop_loss_trend_score,
         "pyramidOnStopLossMaxPositionPercent": config.pyramid_on_stop_loss_max_position_percent,
-        "pyramidOnStopLossMinCash": config.pyramid_on_stop_loss_min_cash
+        "pyramidOnStopLossMinCash": config.pyramid_on_stop_loss_min_cash,
+        # 情绪融合配置（后端小数转前端百分比）
+        "sentimentFusionEnabled": config.sentiment_fusion_enabled,
+        "sentimentFusionMode": config.sentiment_fusion_mode,
+        "sentimentCoingeckoWeight": int(config.sentiment_coingecko_weight * 100),
+        "sentimentFearGreedWeight": int(config.sentiment_fear_greed_weight * 100),
+        "sentimentNewsWeight": int(config.sentiment_news_weight * 100),
+        "sentimentTechnicalWeight": int(config.sentiment_technical_weight * 100),
+        "sentimentCacheDuration": config.sentiment_cache_duration,
+        "sentimentBearishAlertThreshold": config.sentiment_bearish_alert_threshold,
+        "sentimentFetchTimeout": config.sentiment_fetch_timeout,
+        "sentimentFallbackOnError": config.sentiment_fallback_on_error,
+        # 共振策略配置
+        "resonanceMinTotalScore": config.resonance_min_total_score,
+        "resonanceMinCapitalFlowScore": config.min_capital_flow_score,
+        "resonanceSentimentWeight": int(config.resonance_sentiment_weight * 100),
+        "resonanceTechnicalWeight": int(config.resonance_technical_weight * 100),
+        "resonanceCapitalFlowWeight": int(config.resonance_capital_flow_weight * 100),
+        "resonanceMarketEnvWeight": int(config.resonance_market_env_weight * 100),
+        # 技术面验证参数
+        "technicalMinPassCount": config.technical_min_pass_count,
+        "technicalTrendScoreThreshold": config.technical_trend_score_threshold,
+        "technicalRsiMin": config.technical_rsi_min,
+        "technicalRsiMax": config.technical_rsi_max,
+        "technicalVolumeRatioMin": config.technical_volume_ratio_min,
+        "technicalMa5Tolerance": config.technical_ma5_tolerance,
+        "technicalVolatilityMin": config.technical_volatility_min,
+        # 做多智能止损（趋势档位）
+        "smartStopLossEnabled": config.long_smart_stop_loss_enabled,
+        "stopLossTrend8Plus": config.long_stop_loss_trend_8_plus,
+        "stopLossTrend67": config.long_stop_loss_trend_6_7,
+        "stopLossTrendDefault": config.long_stop_loss_trend_default,
+        # 做多动态止盈（趋势档位）
+        "dynamicTakeProfitEnabled": config.long_dynamic_take_profit_enabled,
+        "takeProfitTrend910": config.long_take_profit_trend_9_10,
+        "takeProfitTrend78": config.long_take_profit_trend_7_8,
+        "takeProfitTrend56": config.long_take_profit_trend_5_6,
+        "takeProfitTrendDefault": config.long_take_profit_trend_default,
+        # 做多分层减仓止盈
+        "bandTradeEnabled": config.long_band_trade_enabled,
+        "bandTradeReduceAt": config.long_band_trade_reduce_at,
+        "bandTradeReducePercent": config.long_band_trade_reduce_percent,
+        "bandTradeSecondReduceAt": config.long_band_trade_second_reduce_at,
+        "bandTradeSecondReducePercent": config.long_band_trade_second_reduce_percent,
+        "bandTradeFinalReduceAt": config.long_band_trade_final_reduce_at,
+        # 做多小盈减仓
+        "smallProfitReduceEnabled": config.long_small_profit_reduce_enabled,
+        "smallProfitReduceThresholdPercent": config.long_small_profit_reduce_threshold_percent,
+        "smallProfitReducePositionThreshold": config.long_small_profit_reduce_position_threshold,
+        "smallProfitReduceRatio": config.long_small_profit_reduce_ratio,
+        # 做多止盈限价单
+        "takeProfitLimitOrderEnabled": config.long_take_profit_limit_order_enabled,
+        "takeProfitOrderPartial": config.long_take_profit_order_partial,
+        # 做多止盈百分比
+        "takeProfitPercent": config.long_take_profit_percent
     }
 
 
@@ -412,6 +466,61 @@ async def update_long_config(config: dict):
     trading_engine.config.pyramid_on_stop_loss_trend_score = config.get("pyramidOnStopLossTrendScore", 8)
     trading_engine.config.pyramid_on_stop_loss_max_position_percent = config.get("pyramidOnStopLossMaxPositionPercent", 15.0)
     trading_engine.config.pyramid_on_stop_loss_min_cash = config.get("pyramidOnStopLossMinCash", 25.0)
+    # 情绪融合配置
+    trading_engine.config.sentiment_fusion_enabled = config.get("sentimentFusionEnabled", False)
+    trading_engine.config.sentiment_fusion_mode = config.get("sentimentFusionMode", "free")
+    # 前端发送百分比(0-100)，后端转换为小数(0-1)
+    trading_engine.config.sentiment_coingecko_weight = config.get("sentimentCoingeckoWeight", 30) / 100.0
+    trading_engine.config.sentiment_fear_greed_weight = config.get("sentimentFearGreedWeight", 30) / 100.0
+    trading_engine.config.sentiment_news_weight = config.get("sentimentNewsWeight", 20) / 100.0
+    trading_engine.config.sentiment_technical_weight = config.get("sentimentTechnicalWeight", 40) / 100.0
+    trading_engine.config.sentiment_cache_duration = config.get("sentimentCacheDuration", 300)
+    trading_engine.config.sentiment_bearish_alert_threshold = config.get("sentimentBearishAlertThreshold", 3)
+    trading_engine.config.sentiment_fetch_timeout = config.get("sentimentFetchTimeout", 5.0)
+    trading_engine.config.sentiment_fallback_on_error = config.get("sentimentFallbackOnError", True)
+    # 共振策略配置
+    trading_engine.config.resonance_min_total_score = config.get("resonanceMinTotalScore", 6)
+    trading_engine.config.min_capital_flow_score = config.get("resonanceMinCapitalFlowScore", 4)
+    trading_engine.config.resonance_sentiment_weight = config.get("resonanceSentimentWeight", 30) / 100.0
+    trading_engine.config.resonance_technical_weight = config.get("resonanceTechnicalWeight", 25) / 100.0
+    trading_engine.config.resonance_capital_flow_weight = config.get("resonanceCapitalFlowWeight", 25) / 100.0
+    trading_engine.config.resonance_market_env_weight = config.get("resonanceMarketEnvWeight", 20) / 100.0
+    # 技术面验证参数
+    trading_engine.config.technical_min_pass_count = config.get("technicalMinPassCount", 2)
+    trading_engine.config.technical_trend_score_threshold = config.get("technicalTrendScoreThreshold", 5)
+    trading_engine.config.technical_rsi_min = config.get("technicalRsiMin", 30.0)
+    trading_engine.config.technical_rsi_max = config.get("technicalRsiMax", 80.0)
+    trading_engine.config.technical_volume_ratio_min = config.get("technicalVolumeRatioMin", 0.8)
+    trading_engine.config.technical_ma5_tolerance = config.get("technicalMa5Tolerance", 0.98)
+    trading_engine.config.technical_volatility_min = config.get("technicalVolatilityMin", 0.2)
+    # 做多智能止损（趋势档位）
+    trading_engine.config.long_smart_stop_loss_enabled = config.get("smartStopLossEnabled", True)
+    trading_engine.config.long_stop_loss_trend_8_plus = config.get("stopLossTrend8Plus", 3.0)
+    trading_engine.config.long_stop_loss_trend_6_7 = config.get("stopLossTrend67", 2.0)
+    trading_engine.config.long_stop_loss_trend_default = config.get("stopLossTrendDefault", 1.5)
+    # 做多动态止盈（趋势档位）
+    trading_engine.config.long_dynamic_take_profit_enabled = config.get("dynamicTakeProfitEnabled", True)
+    trading_engine.config.long_take_profit_trend_9_10 = config.get("takeProfitTrend910", 15.0)
+    trading_engine.config.long_take_profit_trend_7_8 = config.get("takeProfitTrend78", 10.0)
+    trading_engine.config.long_take_profit_trend_5_6 = config.get("takeProfitTrend56", 8.0)
+    trading_engine.config.long_take_profit_trend_default = config.get("takeProfitTrendDefault", 6.0)
+    # 做多分层减仓止盈
+    trading_engine.config.long_band_trade_enabled = config.get("bandTradeEnabled", True)
+    trading_engine.config.long_band_trade_reduce_at = config.get("bandTradeReduceAt", 1.5)
+    trading_engine.config.long_band_trade_reduce_percent = config.get("bandTradeReducePercent", 30.0)
+    trading_engine.config.long_band_trade_second_reduce_at = config.get("bandTradeSecondReduceAt", 3.0)
+    trading_engine.config.long_band_trade_second_reduce_percent = config.get("bandTradeSecondReducePercent", 50.0)
+    trading_engine.config.long_band_trade_final_reduce_at = config.get("bandTradeFinalReduceAt", 6.0)
+    # 做多小盈减仓
+    trading_engine.config.long_small_profit_reduce_enabled = config.get("smallProfitReduceEnabled", True)
+    trading_engine.config.long_small_profit_reduce_threshold_percent = config.get("smallProfitReduceThresholdPercent", 50.0)
+    trading_engine.config.long_small_profit_reduce_position_threshold = config.get("smallProfitReducePositionThreshold", 15.0)
+    trading_engine.config.long_small_profit_reduce_ratio = config.get("smallProfitReduceRatio", 50.0)
+    # 做多止盈限价单
+    trading_engine.config.long_take_profit_limit_order_enabled = config.get("takeProfitLimitOrderEnabled", True)
+    trading_engine.config.long_take_profit_order_partial = config.get("takeProfitOrderPartial", 0.5)
+    # 做多止盈百分比
+    trading_engine.config.long_take_profit_percent = config.get("takeProfitPercent", 3.0)
 
     # 保存配置到文件
     _save_long_config(config)
@@ -739,7 +848,59 @@ async def get_short_config():
         "exemptionLossHigh": config.short_exemption_loss_high,
         "exemptionLossMedium": config.short_exemption_loss_medium,
         "exemptionProfit": config.short_exemption_profit,
-        "minCashReserve": config.short_min_cash_reserve
+        "minCashReserve": config.short_min_cash_reserve,
+        # 情绪融合配置（后端小数转前端百分比）
+        "sentimentFusionEnabled": config.sentiment_fusion_enabled,
+        "sentimentFusionMode": config.sentiment_fusion_mode,
+        "sentimentCoingeckoWeight": int(config.sentiment_coingecko_weight * 100),
+        "sentimentFearGreedWeight": int(config.sentiment_fear_greed_weight * 100),
+        "sentimentNewsWeight": int(config.sentiment_news_weight * 100),
+        "sentimentTechnicalWeight": int(config.sentiment_technical_weight * 100),
+        "sentimentCacheDuration": config.sentiment_cache_duration,
+        "sentimentBearishAlertThreshold": config.sentiment_bearish_alert_threshold,
+        "sentimentFetchTimeout": config.sentiment_fetch_timeout,
+        "sentimentFallbackOnError": config.sentiment_fallback_on_error,
+        # 共振策略配置
+        "resonanceMinTotalScore": config.resonance_min_total_score,
+        "resonanceMinCapitalFlowScore": config.min_capital_flow_score,
+        "resonanceSentimentWeight": int(config.resonance_sentiment_weight * 100),
+        "resonanceTechnicalWeight": int(config.resonance_technical_weight * 100),
+        "resonanceCapitalFlowWeight": int(config.resonance_capital_flow_weight * 100),
+        "resonanceMarketEnvWeight": int(config.resonance_market_env_weight * 100),
+        # 技术面验证参数
+        "technicalMinPassCount": config.technical_min_pass_count,
+        "technicalTrendScoreThreshold": config.technical_trend_score_threshold,
+        "technicalRsiMin": config.technical_rsi_min,
+        "technicalRsiMax": config.technical_rsi_max,
+        "technicalVolumeRatioMin": config.technical_volume_ratio_min,
+        "technicalMa5Tolerance": config.technical_ma5_tolerance,
+        "technicalVolatilityMin": config.technical_volatility_min,
+        # 做空智能止损（趋势档位）
+        "smartStopLossEnabled": config.short_smart_stop_loss_enabled,
+        "stopLossTrend02": config.short_stop_loss_trend_0_2,
+        "stopLossTrend34": config.short_stop_loss_trend_3_4,
+        "stopLossTrendDefault": config.short_stop_loss_trend_default,
+        # 做空动态止盈（趋势档位）
+        "dynamicTakeProfitEnabled": config.short_dynamic_take_profit_enabled,
+        "takeProfitTrend01": config.short_take_profit_trend_0_1,
+        "takeProfitTrend23": config.short_take_profit_trend_2_3,
+        "takeProfitTrend4": config.short_take_profit_trend_4,
+        "takeProfitTrendDefault": config.short_take_profit_trend_default,
+        # 做空分层减仓止盈
+        "bandTradeEnabled": config.short_band_trade_enabled,
+        "bandTradeReduceAt": config.short_band_trade_reduce_at,
+        "bandTradeReducePercent": config.short_band_trade_reduce_percent,
+        "bandTradeSecondReduceAt": config.short_band_trade_second_reduce_at,
+        "bandTradeSecondReducePercent": config.short_band_trade_second_reduce_percent,
+        "bandTradeFinalReduceAt": config.short_band_trade_final_reduce_at,
+        # 做空小盈减仓
+        "smallProfitReduceEnabled": config.short_small_profit_reduce_enabled,
+        "smallProfitReduceThresholdPercent": config.short_small_profit_reduce_threshold_percent,
+        "smallProfitReducePositionThreshold": config.short_small_profit_reduce_position_threshold,
+        "smallProfitReduceRatio": config.short_small_profit_reduce_ratio,
+        # 做空止盈限价单
+        "takeProfitLimitOrderEnabled": config.short_take_profit_limit_order_enabled,
+        "takeProfitOrderPartial": config.short_take_profit_order_partial
     }
 
 
@@ -791,6 +952,59 @@ async def update_short_config(config: dict):
     trading_engine.config.short_exemption_loss_medium = config.get("exemptionLossMedium", 45)
     trading_engine.config.short_exemption_profit = config.get("exemptionProfit", 30)
     trading_engine.config.short_min_cash_reserve = config.get("minCashReserve", 30)
+    # 情绪融合配置
+    trading_engine.config.sentiment_fusion_enabled = config.get("sentimentFusionEnabled", False)
+    trading_engine.config.sentiment_fusion_mode = config.get("sentimentFusionMode", "free")
+    # 前端发送百分比(0-100)，后端转换为小数(0-1)
+    trading_engine.config.sentiment_coingecko_weight = config.get("sentimentCoingeckoWeight", 30) / 100.0
+    trading_engine.config.sentiment_fear_greed_weight = config.get("sentimentFearGreedWeight", 30) / 100.0
+    trading_engine.config.sentiment_news_weight = config.get("sentimentNewsWeight", 20) / 100.0
+    trading_engine.config.sentiment_technical_weight = config.get("sentimentTechnicalWeight", 40) / 100.0
+    trading_engine.config.sentiment_cache_duration = config.get("sentimentCacheDuration", 300)
+    trading_engine.config.sentiment_bearish_alert_threshold = config.get("sentimentBearishAlertThreshold", 3)
+    trading_engine.config.sentiment_fetch_timeout = config.get("sentimentFetchTimeout", 5.0)
+    trading_engine.config.sentiment_fallback_on_error = config.get("sentimentFallbackOnError", True)
+    # 共振策略配置
+    trading_engine.config.resonance_min_total_score = config.get("resonanceMinTotalScore", 6)
+    trading_engine.config.min_capital_flow_score = config.get("resonanceMinCapitalFlowScore", 4)
+    trading_engine.config.resonance_sentiment_weight = config.get("resonanceSentimentWeight", 30) / 100.0
+    trading_engine.config.resonance_technical_weight = config.get("resonanceTechnicalWeight", 25) / 100.0
+    trading_engine.config.resonance_capital_flow_weight = config.get("resonanceCapitalFlowWeight", 25) / 100.0
+    trading_engine.config.resonance_market_env_weight = config.get("resonanceMarketEnvWeight", 20) / 100.0
+    # 技术面验证参数
+    trading_engine.config.technical_min_pass_count = config.get("technicalMinPassCount", 2)
+    trading_engine.config.technical_trend_score_threshold = config.get("technicalTrendScoreThreshold", 5)
+    trading_engine.config.technical_rsi_min = config.get("technicalRsiMin", 30.0)
+    trading_engine.config.technical_rsi_max = config.get("technicalRsiMax", 80.0)
+    trading_engine.config.technical_volume_ratio_min = config.get("technicalVolumeRatioMin", 0.8)
+    trading_engine.config.technical_ma5_tolerance = config.get("technicalMa5Tolerance", 0.98)
+    trading_engine.config.technical_volatility_min = config.get("technicalVolatilityMin", 0.2)
+    # 做空智能止损（趋势档位）
+    trading_engine.config.short_smart_stop_loss_enabled = config.get("smartStopLossEnabled", True)
+    trading_engine.config.short_stop_loss_trend_0_2 = config.get("stopLossTrend02", 3.0)
+    trading_engine.config.short_stop_loss_trend_3_4 = config.get("stopLossTrend34", 2.0)
+    trading_engine.config.short_stop_loss_trend_default = config.get("stopLossTrendDefault", 1.5)
+    # 做空动态止盈（趋势档位）
+    trading_engine.config.short_dynamic_take_profit_enabled = config.get("dynamicTakeProfitEnabled", True)
+    trading_engine.config.short_take_profit_trend_0_1 = config.get("takeProfitTrend01", 15.0)
+    trading_engine.config.short_take_profit_trend_2_3 = config.get("takeProfitTrend23", 10.0)
+    trading_engine.config.short_take_profit_trend_4 = config.get("takeProfitTrend4", 8.0)
+    trading_engine.config.short_take_profit_trend_default = config.get("takeProfitTrendDefault", 6.0)
+    # 做空分层减仓止盈
+    trading_engine.config.short_band_trade_enabled = config.get("bandTradeEnabled", True)
+    trading_engine.config.short_band_trade_reduce_at = config.get("bandTradeReduceAt", 1.5)
+    trading_engine.config.short_band_trade_reduce_percent = config.get("bandTradeReducePercent", 30.0)
+    trading_engine.config.short_band_trade_second_reduce_at = config.get("bandTradeSecondReduceAt", 3.0)
+    trading_engine.config.short_band_trade_second_reduce_percent = config.get("bandTradeSecondReducePercent", 50.0)
+    trading_engine.config.short_band_trade_final_reduce_at = config.get("bandTradeFinalReduceAt", 6.0)
+    # 做空小盈减仓
+    trading_engine.config.short_small_profit_reduce_enabled = config.get("smallProfitReduceEnabled", True)
+    trading_engine.config.short_small_profit_reduce_threshold_percent = config.get("smallProfitReduceThresholdPercent", 50.0)
+    trading_engine.config.short_small_profit_reduce_position_threshold = config.get("smallProfitReducePositionThreshold", 15.0)
+    trading_engine.config.short_small_profit_reduce_ratio = config.get("smallProfitReduceRatio", 50.0)
+    # 做空止盈限价单
+    trading_engine.config.short_take_profit_limit_order_enabled = config.get("takeProfitLimitOrderEnabled", True)
+    trading_engine.config.short_take_profit_order_partial = config.get("takeProfitOrderPartial", 0.5)
 
     settings_file = Path("settings.json")
     settings = {}
@@ -1050,7 +1264,6 @@ async def get_risk_config():
     config = trading_engine.config
 
     return {
-        # 核心配置
         "maxPositionPercent": config.max_position_percent,
         "maxDailyTrades": config.max_daily_trades,
         "maxDailyVolume": config.max_daily_volume,
@@ -1061,19 +1274,15 @@ async def get_risk_config():
         "minCashReserve": config.min_cash_reserve,
         "tradeSize": config.trade_size,
         "buyCooldownMinutes": config.buy_cooldown_minutes,
-        # 检查频率配置
         "checkIntervalHighIntensity": config.check_interval_high_intensity,
         "checkIntervalLowIntensity": config.check_interval_low_intensity,
         "checkIntensityThreshold": config.check_intensity_threshold,
-        # 波段操作配置
-        "bandTradeEnabled": config.band_trade_enabled,
-        "bandTradeReduceAt": config.band_trade_reduce_at,
-        "bandTradeSecondReduceAt": config.band_trade_second_reduce_at,
-        "bandTradeFinalReduceAt": config.band_trade_final_reduce_at,
-        "bandTradeReducePercent": config.band_trade_reduce_percent,
-        "bandTradeSecondReducePercent": config.band_trade_second_reduce_percent,
-        "bandTradeBuyBackAt": config.band_trade_buy_back_at,
-        # 分层冷却期配置
+        "bandTradeEnabled": config.long_band_trade_enabled,
+        "bandTradeReduceAt": config.long_band_trade_reduce_at,
+        "bandTradeSecondReduceAt": config.long_band_trade_second_reduce_at,
+        "bandTradeFinalReduceAt": config.long_band_trade_final_reduce_at,
+        "bandTradeReducePercent": config.long_band_trade_reduce_percent,
+        "bandTradeSecondReducePercent": config.long_band_trade_second_reduce_percent,
         "tieredCooldownEnabled": config.tiered_cooldown_enabled,
         "cooldownTrend10": config.cooldown_trend_10,
         "cooldownTrend8_9": config.cooldown_trend_8_9,
@@ -1081,16 +1290,9 @@ async def get_risk_config():
         "cooldownScoreTier1": config.cooldown_score_tier1,
         "cooldownScoreTier2": config.cooldown_score_tier2,
         "cooldownScoreTier3": config.cooldown_score_tier3,
-        # 止盈止损评分阈值配置
-        "takeProfitScoreTier1": config.take_profit_score_tier1,
-        "takeProfitScoreTier2": config.take_profit_score_tier2,
-        "takeProfitScoreTier3": config.take_profit_score_tier3,
-        "stopLossScoreTier1": config.stop_loss_score_tier1,
-        "stopLossScoreTier2": config.stop_loss_score_tier2,
         "positionPercentScoreTier1": config.position_percent_score_tier1,
         "positionPercentScoreTier2": config.position_percent_score_tier2,
         "positionPercentScoreTier3": config.position_percent_score_tier3,
-        # 波动率筛选配置
         "volatilityFilterEnabled": config.volatility_filter_enabled,
         "volatilityMin": config.volatility_min,
         "volatilityPreferred": config.volatility_preferred,
@@ -1098,16 +1300,13 @@ async def get_risk_config():
         "cooldownLowVolatility": config.cooldown_low_volatility,
         "cooldownHighVolatilityMultiplier": config.cooldown_high_volatility_multiplier,
         "cooldownLowVolatilityMultiplier": config.cooldown_low_volatility_multiplier,
-        # 趋势变盘减仓配置
         "trendReversalEnabled": config.trend_reversal_enabled,
         "trendReversalFromScore": config.trend_reversal_from_score,
         "trendReversalToScore": config.trend_reversal_to_score,
         "trendReversalMinPeriods": config.trend_reversal_min_periods,
         "trendReversalReducePercent": config.trend_reversal_reduce_percent,
-        # 止盈限价单配置
-        "takeProfitLimitOrderEnabled": config.take_profit_limit_order_enabled,
+        "takeProfitLimitOrderEnabled": config.long_take_profit_limit_order_enabled,
         "takeProfitLimitOrderAutoCancel": config.take_profit_limit_order_auto_cancel,
-        # 时间衰减止损配置
         "timeDecayEnabled": config.time_decay_enabled,
         "timeDecayFactor": config.time_decay_factor,
         "maxStopLoss": config.max_stop_loss,
@@ -1115,58 +1314,35 @@ async def get_risk_config():
         "maxTakeProfit": config.max_take_profit,
         "minTakeProfit": config.min_take_profit,
         "timeDecayMaxStop": config.time_decay_max_stop,
-        # 分批止盈配置（波段操作）
-        "tieredTakeProfitEnabled": config.tiered_take_profit_enabled,
-        "takeProfitTier1Percent": config.take_profit_tier1_percent,
-        "takeProfitTier1Ratio": config.take_profit_tier1_ratio,
-        "takeProfitTier2Percent": config.take_profit_tier2_percent,
-        "takeProfitTier2Ratio": config.take_profit_tier2_ratio,
-        "takeProfitTier3Percent": config.take_profit_tier3_percent,
-        "takeProfitTier3Ratio": config.take_profit_tier3_ratio,
-        # 舆情触发交易配置
         "sentimentTriggerEnabled": config.sentiment_trigger_enabled,
         "sentimentBuyThreshold": config.sentiment_buy_threshold,
-        "sentimentSellThreshold": config.sentiment_sell_threshold,
         "sentimentMinVolumeSurge": config.sentiment_min_volume_surge,
         "sentimentTrendWeight": config.sentiment_trend_weight,
         "sentimentNewsWeight": config.sentiment_news_weight,
-        # 其他配置
         "timeStopHours": config.time_stop_hours,
         "dynamicBandsEnabled": config.dynamic_bands_enabled,
         "overPositionExemptionEnabled": config.over_position_exemption_enabled,
         "exemptionLossHigh": config.exemption_loss_high,
         "exemptionLossMedium": config.exemption_loss_medium,
         "exemptionProfit": config.exemption_profit,
-        # 回调加仓条件
         "pullbackBuyEnabled": config.pullback_buy_enabled,
         "pullbackBuyThreshold": config.pullback_buy_threshold,
-        # 实时盈亏验证
         "pnlCheckEnabled": config.pnl_check_enabled,
         "pnlCheckThreshold": config.pnl_check_threshold,
         "pnlCheckAdjustScore": config.pnl_check_adjust_score,
-        # 黑名单趋势反转检查
         "blacklistTrendCheckEnabled": config.blacklist_trend_check_enabled,
         "blacklistTrendThreshold": config.blacklist_trend_threshold,
         "blacklistTrendCount": config.blacklist_trend_count,
         "blacklistHighThreshold": config.blacklist_high_threshold,
-        # 买入金额递减
         "decreasingTradeSizeEnabled": config.decreasing_trade_size_enabled,
         "decreasingFactors": config.decreasing_factors,
-        # 止盈单管理
         "takeProfitOrderEnabled": config.take_profit_order_enabled,
         "takeProfitOrderPartial": config.take_profit_order_partial,
         "takeProfitAdjustOnBadSentiment": config.take_profit_adjust_on_bad_sentiment,
         "takeProfitBadSentimentThreshold": config.take_profit_bad_sentiment_threshold,
-        # 黄金稳定币特殊处理
         "goldStablecoinSpecialHandling": config.gold_stablecoin_special_handling,
         "goldStablecoinList": config.gold_stablecoin_list,
         "goldStablecoinTakeProfit": config.gold_stablecoin_take_profit,
-        # 智能超仓豁免期配置
-        "overPositionExemptionEnabled": config.over_position_exemption_enabled,
-        "exemptionLossHighMinutes": config.exemption_loss_high,
-        "exemptionLossMediumMinutes": config.exemption_loss_medium,
-        "exemptionProfitMinutes": config.exemption_profit,
-        # 多空互斥决策配置
         "mutualExclusiveEnabled": config.mutual_exclusive_enabled,
         "mutualExclusiveMinScore": config.mutual_exclusive_min_score,
         "mutualExclusiveScoreDiff": config.mutual_exclusive_score_diff
@@ -1252,14 +1428,21 @@ async def update_risk_config(config: dict):
     trading_engine.config.min_take_profit = config.get("minTakeProfit", 2.0)
     trading_engine.config.time_decay_max_stop = config.get("timeDecayMaxStop", -8.0)
 
-    # 分批止盈配置（波段操作）
-    trading_engine.config.tiered_take_profit_enabled = config.get("tieredTakeProfitEnabled", True)
-    trading_engine.config.take_profit_tier1_percent = config.get("takeProfitTier1Percent", 1.5)
-    trading_engine.config.take_profit_tier1_ratio = config.get("takeProfitTier1Ratio", 0.3)
-    trading_engine.config.take_profit_tier2_percent = config.get("takeProfitTier2Percent", 3.0)
-    trading_engine.config.take_profit_tier2_ratio = config.get("takeProfitTier2Ratio", 0.5)
-    trading_engine.config.take_profit_tier3_percent = config.get("takeProfitTier3Percent", 6.0)
-    trading_engine.config.take_profit_tier3_ratio = config.get("takeProfitTier3Ratio", 1.0)
+    # 做多分层减仓止盈配置
+    trading_engine.config.long_band_trade_enabled = config.get("longBandTradeEnabled", True)
+    trading_engine.config.long_band_trade_reduce_at = config.get("longBandTradeReduceAt", 1.5)
+    trading_engine.config.long_band_trade_reduce_percent = config.get("longBandTradeReducePercent", 30.0)
+    trading_engine.config.long_band_trade_second_reduce_at = config.get("longBandTradeSecondReduceAt", 3.0)
+    trading_engine.config.long_band_trade_second_reduce_percent = config.get("longBandTradeSecondReducePercent", 50.0)
+    trading_engine.config.long_band_trade_final_reduce_at = config.get("longBandTradeFinalReduceAt", 6.0)
+
+    # 做空分层减仓止盈配置
+    trading_engine.config.short_band_trade_enabled = config.get("shortBandTradeEnabled", True)
+    trading_engine.config.short_band_trade_reduce_at = config.get("shortBandTradeReduceAt", 1.5)
+    trading_engine.config.short_band_trade_reduce_percent = config.get("shortBandTradeReducePercent", 30.0)
+    trading_engine.config.short_band_trade_second_reduce_at = config.get("shortBandTradeSecondReduceAt", 3.0)
+    trading_engine.config.short_band_trade_second_reduce_percent = config.get("shortBandTradeSecondReducePercent", 50.0)
+    trading_engine.config.short_band_trade_final_reduce_at = config.get("shortBandTradeFinalReduceAt", 6.0)
 
     # 舆情触发交易配置
     trading_engine.config.sentiment_trigger_enabled = config.get("sentimentTriggerEnabled", True)

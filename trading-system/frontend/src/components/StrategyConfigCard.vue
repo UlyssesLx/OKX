@@ -73,6 +73,14 @@
             </a>
             <a
               class="nav-item"
+              :class="{ active: activeNav === 'resonance' }"
+              @click="activeNav = 'resonance'"
+            >
+              <span class="icon">🔮</span>
+              <span>共振策略</span>
+            </a>
+            <a
+              class="nav-item"
               :class="{ active: activeNav === 'trade-config' }"
               @click="activeNav = 'trade-config'"
             >
@@ -176,14 +184,6 @@
             >
               <span class="icon">🧠</span>
               <span>高级功能</span>
-            </a>
-            <a
-              class="nav-item"
-              :class="{ active: activeNav === 'take-profit-order' }"
-              @click="activeNav = 'take-profit-order'"
-            >
-              <span class="icon">🎯</span>
-              <span>止盈单</span>
             </a>
             <a
               class="nav-item"
@@ -297,6 +297,100 @@
                   <span class="stat-unit">USDT</span>
                 </div>
               </div>
+            </div>
+          </div>
+
+          <div class="config-section">
+            <div class="section-title">🔬 技术面验证（共振策略专用）</div>
+            <div class="param-grid three-col">
+              <div class="param-item">
+                <div class="stat-card">
+                  <div class="stat-icon">✅</div>
+                  <div class="stat-info">
+                    <div class="stat-label">最少通过项数</div>
+                    <div class="stat-control">
+                      <el-input-number v-model="currentConfig.technicalMinPassCount" :min="1" :max="5" :step="1" :disabled="isPaused" controls-position="right" />
+                      <span class="stat-unit">/{{ currentConfig.technicalMinPassCount }}项</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="param-item">
+                <div class="stat-card">
+                  <div class="stat-icon">📈</div>
+                  <div class="stat-info">
+                    <div class="stat-label">趋势评分阈值</div>
+                    <div class="stat-control">
+                      <el-input-number v-model="currentConfig.technicalTrendScoreThreshold" :min="3" :max="8" :step="1" :disabled="isPaused" controls-position="right" />
+                      <span class="stat-unit">分</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="param-item">
+                <div class="stat-card">
+                  <div class="stat-icon">〰️</div>
+                  <div class="stat-info">
+                    <div class="stat-label">RSI 下限</div>
+                    <div class="stat-control">
+                      <el-input-number v-model="currentConfig.technicalRsiMin" :min="20" :max="40" :step="1" :disabled="isPaused" controls-position="right" />
+                      <span class="stat-unit">{{ currentConfig.technicalRsiMin }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="param-item">
+                <div class="stat-card">
+                  <div class="stat-icon">〰️</div>
+                  <div class="stat-info">
+                    <div class="stat-label">RSI 上限</div>
+                    <div class="stat-control">
+                      <el-input-number v-model="currentConfig.technicalRsiMax" :min="70" :max="90" :step="1" :disabled="isPaused" controls-position="right" />
+                      <span class="stat-unit">{{ currentConfig.technicalRsiMax }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="param-item">
+                <div class="stat-card">
+                  <div class="stat-icon">📊</div>
+                  <div class="stat-info">
+                    <div class="stat-label">成交量比下限</div>
+                    <div class="stat-control">
+                      <el-input-number v-model="currentConfig.technicalVolumeRatioMin" :min="0.5" :max="2.0" :step="0.1" :disabled="isPaused" controls-position="right" />
+                      <span class="stat-unit">{{ currentConfig.technicalVolumeRatioMin }}x</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="param-item">
+                <div class="stat-card">
+                  <div class="stat-icon">📉</div>
+                  <div class="stat-info">
+                    <div class="stat-label">MA5 容忍度</div>
+                    <div class="stat-control">
+                      <el-input-number v-model="currentConfig.technicalMa5Tolerance" :min="0.95" :max="1.0" :step="0.01" :disabled="isPaused" controls-position="right" />
+                      <span class="stat-unit">{{ currentConfig.technicalMa5Tolerance }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="param-item">
+                <div class="stat-card">
+                  <div class="stat-icon">📈</div>
+                  <div class="stat-info">
+                    <div class="stat-label">波动率下限</div>
+                    <div class="stat-control">
+                      <el-input-number v-model="currentConfig.technicalVolatilityMin" :min="0.1" :max="1.0" :step="0.1" :disabled="isPaused" controls-position="right" />
+                      <span class="stat-unit">{{ currentConfig.technicalVolatilityMin }}%</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="config-tip" style="margin-top: 12px;">
+              <span class="tip-icon">📋</span>
+              <span>技术面验证 5 项：趋势评分、RSI、成交量比、价格位置、波动率。通过至少 {{ currentConfig.technicalMinPassCount }} 项即可</span>
             </div>
           </div>
         </div>
@@ -467,6 +561,106 @@
           </div>
         </div>
 
+        <!-- 共振策略 -->
+        <div v-show="activeNav === 'resonance'" class="config-panel">
+          <div class="panel-header">
+            <h2 class="panel-title">🔮 多维度共振策略</h2>
+            <p class="panel-desc">对齐 ai_trading_bot.js 核心策略：舆情 + 技术 + 资金 + 大盘四维共振</p>
+          </div>
+
+          <div class="config-section">
+            <div class="section-title">📊 共振权重配置</div>
+            <div class="param-grid two-col">
+              <div class="param-item">
+                <div class="stat-card">
+                  <div class="stat-icon">📈</div>
+                  <div class="stat-info">
+                    <div class="stat-label">舆情评分权重</div>
+                    <div class="stat-control">
+                      <el-slider v-model="currentConfig.resonanceSentimentWeight" :min="0" :max="100" :step="5" :disabled="isPaused" />
+                      <span class="stat-unit">{{ Math.round(currentConfig.resonanceSentimentWeight) }}%</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="param-item">
+                <div class="stat-card">
+                  <div class="stat-icon">📊</div>
+                  <div class="stat-info">
+                    <div class="stat-label">技术面权重</div>
+                    <div class="stat-control">
+                      <el-slider v-model="currentConfig.resonanceTechnicalWeight" :min="0" :max="100" :step="5" :disabled="isPaused" />
+                      <span class="stat-unit">{{ Math.round(currentConfig.resonanceTechnicalWeight) }}%</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="param-item">
+                <div class="stat-card">
+                  <div class="stat-icon">💰</div>
+                  <div class="stat-info">
+                    <div class="stat-label">资金流向权重</div>
+                    <div class="stat-control">
+                      <el-slider v-model="currentConfig.resonanceCapitalFlowWeight" :min="0" :max="100" :step="5" :disabled="isPaused" />
+                      <span class="stat-unit">{{ Math.round(currentConfig.resonanceCapitalFlowWeight) }}%</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="param-item">
+                <div class="stat-card">
+                  <div class="stat-icon">🌍</div>
+                  <div class="stat-info">
+                    <div class="stat-label">大盘环境权重</div>
+                    <div class="stat-control">
+                      <el-slider v-model="currentConfig.resonanceMarketEnvWeight" :min="0" :max="100" :step="5" :disabled="isPaused" />
+                      <span class="stat-unit">{{ Math.round(currentConfig.resonanceMarketEnvWeight) }}%</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="config-tip" style="margin-top: 12px;">
+              <span class="tip-icon">💡</span>
+              <span>建议配置：舆情 30% + 技术面 25% + 资金流 25% + 大盘 20% = 100%</span>
+            </div>
+          </div>
+
+          <div class="config-section">
+            <div class="section-title">🎯 共振门槛配置</div>
+            <div class="param-grid two-col">
+              <div class="param-item">
+                <div class="stat-card">
+                  <div class="stat-icon">🔢</div>
+                  <div class="stat-info">
+                    <div class="stat-label">共振总分门槛</div>
+                    <div class="stat-control">
+                      <el-input-number v-model="currentConfig.resonanceMinTotalScore" :min="4" :max="10" :step="1" :disabled="isPaused" controls-position="right" />
+                      <span class="stat-unit">分</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="param-item">
+                <div class="stat-card">
+                  <div class="stat-icon">💰</div>
+                  <div class="stat-info">
+                    <div class="stat-label">资金流最低分数</div>
+                    <div class="stat-control">
+                      <el-input-number v-model="currentConfig.resonanceMinCapitalFlowScore" :min="3" :max="8" :step="1" :disabled="isPaused" controls-position="right" />
+                      <span class="stat-unit">分</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="config-tip" style="margin-top: 8px;">
+                  <span class="tip-icon">📋</span>
+                  <span>ai_trading_bot.js: capitalFlow.score >= 4</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- 交易配置 -->
         <div v-show="activeNav === 'trade-config'" class="config-panel">
           <div class="panel-header">
@@ -583,23 +777,149 @@
               </div>
             </div>
           </div>
+
+          <div class="config-section">
+            <div class="section-title">🔗 情绪融合配置</div>
+            <div class="param-grid two-col" style="gap: 12px;">
+              <div class="param-item">
+                <div class="toggle-card full-width" :class="{ active: currentConfig.sentimentFusionEnabled }">
+                  <div class="toggle-info">
+                    <div class="toggle-title">启用情绪融合</div>
+                    <div class="toggle-desc">融合市场情绪与技术面评分，提高决策准确性</div>
+                  </div>
+                  <div class="toggle-control">
+                    <el-switch v-model="currentConfig.sentimentFusionEnabled" :disabled="isPaused" active-text="开" inactive-text="关" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div v-if="currentConfig.sentimentFusionEnabled" class="param-grid three-col" style="margin-top: 16px; gap: 12px;">
+              <div class="param-item full-width">
+                <div class="stat-card">
+                  <div class="stat-icon">🎯</div>
+                  <div class="stat-info">
+                    <div class="stat-label">融合模式</div>
+                    <div class="stat-control">
+                      <el-radio-group v-model="currentConfig.sentimentFusionMode" :disabled="isPaused">
+                        <el-radio-button value="free">
+                          <span>🆓 免费模式</span>
+                          <el-tooltip content="CoinGecko + Fear & Greed Index，完全免费无需API Key" placement="top">
+                            <el-icon style="margin-left: 4px;"><QuestionFilled /></el-icon>
+                          </el-tooltip>
+                        </el-radio-button>
+                        <el-radio-button value="news">
+                          <span>📰 新闻模式</span>
+                          <el-tooltip content="CoinGecko + 新闻情绪，需要网络稳定" placement="top">
+                            <el-icon style="margin-left: 4px;"><QuestionFilled /></el-icon>
+                          </el-tooltip>
+                        </el-radio-button>
+                      </el-radio-group>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="param-item">
+                <div class="stat-card">
+                  <div class="stat-icon">🌐</div>
+                  <div class="stat-info">
+                    <div class="stat-label">CoinGecko 权重</div>
+                    <div class="stat-control">
+                      <el-input-number v-model="currentConfig.sentimentCoingeckoWeight" :min="0" :max="100" :step="5" :disabled="isPaused" controls-position="right" />
+                      <span class="stat-unit">%</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="param-item" v-if="currentConfig.sentimentFusionMode === 'free'">
+                <div class="stat-card">
+                  <div class="stat-icon">😨</div>
+                  <div class="stat-info">
+                    <div class="stat-label">Fear & Greed 权重</div>
+                    <div class="stat-control">
+                      <el-input-number v-model="currentConfig.sentimentFearGreedWeight" :min="0" :max="100" :step="5" :disabled="isPaused" controls-position="right" />
+                      <span class="stat-unit">%</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="param-item" v-else>
+                <div class="stat-card">
+                  <div class="stat-icon">📰</div>
+                  <div class="stat-info">
+                    <div class="stat-label">新闻情绪权重</div>
+                    <div class="stat-control">
+                      <el-input-number v-model="currentConfig.sentimentNewsWeight" :min="0" :max="100" :step="5" :disabled="isPaused" controls-position="right" />
+                      <span class="stat-unit">%</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="param-item">
+                <div class="stat-card">
+                  <div class="stat-icon">📊</div>
+                  <div class="stat-info">
+                    <div class="stat-label">技术面权重</div>
+                    <div class="stat-control">
+                      <el-input-number v-model="currentConfig.sentimentTechnicalWeight" :min="0" :max="100" :step="5" :disabled="isPaused" controls-position="right" />
+                      <span class="stat-unit">%</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="param-item" v-if="currentConfig.sentimentFusionMode === 'news'">
+                <div class="stat-card">
+                  <div class="stat-icon">⚠️</div>
+                  <div class="stat-info">
+                    <div class="stat-label">极度看跌阈值</div>
+                    <div class="stat-control">
+                      <el-input-number v-model="currentConfig.sentimentBearishAlertThreshold" :min="1" :max="5" :step="1" :disabled="isPaused" controls-position="right" />
+                      <span class="stat-unit">分</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="param-item">
+                <div class="stat-card">
+                  <div class="stat-icon">⏱️</div>
+                  <div class="stat-info">
+                    <div class="stat-label">API 超时</div>
+                    <div class="stat-control">
+                      <el-input-number v-model="currentConfig.sentimentFetchTimeout" :min="1" :max="10" :step="1" :disabled="isPaused" controls-position="right" />
+                      <span class="stat-unit">秒</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div v-if="currentConfig.sentimentFusionEnabled" class="config-tip" style="margin-top: 12px;">
+              <span class="tip-icon">💡</span>
+              <span>权重分配建议: CoinGecko(40%) + 新闻(20%) + 技术面(40%) = 100%</span>
+            </div>
+            <div v-if="currentConfig.sentimentFusionEnabled" class="config-tip">
+              <span class="tip-icon">⚠️</span>
+              <span>当 CoinGecko 评分 ≤ {{ currentConfig.sentimentBearishAlertThreshold }} 分且技术面 ≥ 6 分时，系统会发出警告并降低综合评分</span>
+            </div>
+          </div>
         </div>
 
         <!-- 止盈止损 -->
         <div v-show="activeNav === 'stop-loss'" class="config-panel">
           <div class="panel-header">
             <h2 class="panel-title">{{ tradeDirection === 'long' ? '做多止盈止损' : '做空止盈止损' }}</h2>
-            <p class="panel-desc">设置止损和止盈规则</p>
+            <p class="panel-desc">设置止损和止盈规则，支持多空分别配置</p>
           </div>
 
+          <!-- 基础止盈止损 -->
           <div class="config-section">
-            <div class="section-title">止损设置</div>
+            <div class="section-title">基础止损设置</div>
             <div class="param-grid">
               <div class="param-item full-width">
                 <div class="stat-card">
                   <div class="stat-icon">🛡️</div>
                   <div class="stat-info">
-                    <div class="stat-label">止损比例</div>
+                    <div class="stat-label">基础止损比例</div>
                     <div class="stat-control">
                       <el-slider
                         v-model="currentConfig.stopLossPercent"
@@ -618,17 +938,230 @@
             <p class="param-hint" v-else style="margin-top: 8px;">价格上涨超过此比例时触发止损</p>
           </div>
 
+          <!-- 智能止损（趋势档位） -->
           <div class="config-section">
-            <div class="section-title">止盈设置</div>
-            <div class="param-grid two-col">
+            <div class="toggle-card" :class="{ active: currentConfig.smartStopLossEnabled }">
+              <div class="toggle-info">
+                <div class="toggle-title">智能止损（趋势档位）</div>
+                <div class="toggle-desc">根据趋势评分动态调整止损线，强趋势时放宽止损</div>
+              </div>
+              <el-switch v-model="currentConfig.smartStopLossEnabled" :disabled="isPaused" />
+            </div>
+            <div v-if="currentConfig.smartStopLossEnabled" class="param-grid three-col" style="margin-top: 16px;">
+              <div class="param-item" v-if="tradeDirection === 'long'">
+                <div class="stat-card">
+                  <div class="stat-icon">📈</div>
+                  <div class="stat-info">
+                    <div class="stat-label">趋势≥8分止损</div>
+                    <div class="stat-control">
+                      <el-input-number v-model="(currentConfig as any).stopLossTrend8Plus" :min="1" :max="5" :step="0.5" :disabled="isPaused" />
+                      <span class="stat-unit">%</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="param-item" v-if="tradeDirection === 'long'">
+                <div class="stat-card">
+                  <div class="stat-icon">📊</div>
+                  <div class="stat-info">
+                    <div class="stat-label">趋势6-7分止损</div>
+                    <div class="stat-control">
+                      <el-input-number v-model="(currentConfig as any).stopLossTrend67" :min="1" :max="4" :step="0.5" :disabled="isPaused" />
+                      <span class="stat-unit">%</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="param-item" v-if="tradeDirection === 'short'">
+                <div class="stat-card">
+                  <div class="stat-icon">📉</div>
+                  <div class="stat-info">
+                    <div class="stat-label">趋势0-2分止损</div>
+                    <div class="stat-control">
+                      <el-input-number v-model="(currentConfig as any).stopLossTrend02" :min="1" :max="5" :step="0.5" :disabled="isPaused" />
+                      <span class="stat-unit">%</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="param-item" v-if="tradeDirection === 'short'">
+                <div class="stat-card">
+                  <div class="stat-icon">📊</div>
+                  <div class="stat-info">
+                    <div class="stat-label">趋势3-4分止损</div>
+                    <div class="stat-control">
+                      <el-input-number v-model="(currentConfig as any).stopLossTrend34" :min="1" :max="4" :step="0.5" :disabled="isPaused" />
+                      <span class="stat-unit">%</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
               <div class="param-item">
                 <div class="stat-card">
                   <div class="stat-icon">🎯</div>
                   <div class="stat-info">
-                    <div class="stat-label">第一止盈</div>
+                    <div class="stat-label">默认止损</div>
                     <div class="stat-control">
-                      <el-slider v-model="currentConfig.takeProfit1" :min="0.5" :max="10" :step="0.1" :disabled="isPaused" />
-                      <span class="stat-unit">+{{ currentConfig.takeProfit1 }}%</span>
+                      <el-input-number v-model="currentConfig.stopLossTrendDefault" :min="0.5" :max="3" :step="0.5" :disabled="isPaused" />
+                      <span class="stat-unit">%</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 动态止盈（趋势档位） -->
+          <div class="config-section">
+            <div class="toggle-card" :class="{ active: currentConfig.dynamicTakeProfitEnabled }">
+              <div class="toggle-info">
+                <div class="toggle-title">动态止盈（趋势档位）</div>
+                <div class="toggle-desc">根据趋势评分动态调整止盈目标，强趋势时扩大止盈</div>
+              </div>
+              <el-switch v-model="currentConfig.dynamicTakeProfitEnabled" :disabled="isPaused" />
+            </div>
+            <div v-if="currentConfig.dynamicTakeProfitEnabled" class="param-grid two-col" style="margin-top: 16px;">
+              <div class="param-item" v-if="tradeDirection === 'long'">
+                <div class="stat-card">
+                  <div class="stat-icon">🚀</div>
+                  <div class="stat-info">
+                    <div class="stat-label">趋势9-10分止盈</div>
+                    <div class="stat-control">
+                      <el-input-number v-model="(currentConfig as any).takeProfitTrend910" :min="5" :max="25" :step="0.5" :disabled="isPaused" />
+                      <span class="stat-unit">%</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="param-item" v-if="tradeDirection === 'long'">
+                <div class="stat-card">
+                  <div class="stat-icon">📈</div>
+                  <div class="stat-info">
+                    <div class="stat-label">趋势7-8分止盈</div>
+                    <div class="stat-control">
+                      <el-input-number v-model="(currentConfig as any).takeProfitTrend78" :min="5" :max="20" :step="0.5" :disabled="isPaused" />
+                      <span class="stat-unit">%</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="param-item" v-if="tradeDirection === 'long'">
+                <div class="stat-card">
+                  <div class="stat-icon">📊</div>
+                  <div class="stat-info">
+                    <div class="stat-label">趋势5-6分止盈</div>
+                    <div class="stat-control">
+                      <el-input-number v-model="(currentConfig as any).takeProfitTrend56" :min="3" :max="15" :step="0.5" :disabled="isPaused" />
+                      <span class="stat-unit">%</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="param-item" v-if="tradeDirection === 'short'">
+                <div class="stat-card">
+                  <div class="stat-icon">📉</div>
+                  <div class="stat-info">
+                    <div class="stat-label">趋势0-1分止盈</div>
+                    <div class="stat-control">
+                      <el-input-number v-model="(currentConfig as any).takeProfitTrend01" :min="5" :max="25" :step="0.5" :disabled="isPaused" />
+                      <span class="stat-unit">%</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="param-item" v-if="tradeDirection === 'short'">
+                <div class="stat-card">
+                  <div class="stat-icon">📊</div>
+                  <div class="stat-info">
+                    <div class="stat-label">趋势2-3分止盈</div>
+                    <div class="stat-control">
+                      <el-input-number v-model="(currentConfig as any).takeProfitTrend23" :min="5" :max="20" :step="0.5" :disabled="isPaused" />
+                      <span class="stat-unit">%</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="param-item" v-if="tradeDirection === 'short'">
+                <div class="stat-card">
+                  <div class="stat-icon">📈</div>
+                  <div class="stat-info">
+                    <div class="stat-label">趋势4分止盈</div>
+                    <div class="stat-control">
+                      <el-input-number v-model="(currentConfig as any).takeProfitTrend4" :min="3" :max="15" :step="0.5" :disabled="isPaused" />
+                      <span class="stat-unit">%</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="param-item">
+                <div class="stat-card">
+                  <div class="stat-icon">🎯</div>
+                  <div class="stat-info">
+                    <div class="stat-label">默认止盈</div>
+                    <div class="stat-control">
+                      <el-input-number v-model="currentConfig.takeProfitTrendDefault" :min="3" :max="15" :step="0.5" :disabled="isPaused" />
+                      <span class="stat-unit">%</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 分层减仓止盈（波段操作） -->
+          <div class="config-section">
+            <div class="toggle-card" :class="{ active: currentConfig.bandTradeEnabled }">
+              <div class="toggle-info">
+                <div class="toggle-title">分层减仓止盈（波段操作）</div>
+                <div class="toggle-desc">盈利时分批减仓锁定利润，参考示例项目逻辑</div>
+              </div>
+              <el-switch v-model="currentConfig.bandTradeEnabled" :disabled="isPaused" />
+            </div>
+            <div v-if="currentConfig.bandTradeEnabled" class="param-grid three-col" style="margin-top: 16px;">
+              <div class="param-item">
+                <div class="stat-card">
+                  <div class="stat-icon">1️⃣</div>
+                  <div class="stat-info">
+                    <div class="stat-label">第一档减仓点</div>
+                    <div class="stat-control">
+                      <el-input-number v-model="currentConfig.bandTradeReduceAt" :min="0.5" :max="5" :step="0.5" :disabled="isPaused" />
+                      <span class="stat-unit">%</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="param-item">
+                <div class="stat-card">
+                  <div class="stat-icon">📉</div>
+                  <div class="stat-info">
+                    <div class="stat-label">第一档减仓比例</div>
+                    <div class="stat-control">
+                      <el-input-number v-model="currentConfig.bandTradeReducePercent" :min="10" :max="50" :step="5" :disabled="isPaused" />
+                      <span class="stat-unit">%</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="param-item">
+                <div class="stat-card">
+                  <div class="stat-icon">2️⃣</div>
+                  <div class="stat-info">
+                    <div class="stat-label">第二档减仓点</div>
+                    <div class="stat-control">
+                      <el-input-number v-model="currentConfig.bandTradeSecondReduceAt" :min="1" :max="8" :step="0.5" :disabled="isPaused" />
+                      <span class="stat-unit">%</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="param-item">
+                <div class="stat-card">
+                  <div class="stat-icon">📉</div>
+                  <div class="stat-info">
+                    <div class="stat-label">第二档减仓比例</div>
+                    <div class="stat-control">
+                      <el-input-number v-model="currentConfig.bandTradeSecondReducePercent" :min="20" :max="70" :step="5" :disabled="isPaused" />
+                      <span class="stat-unit">%</span>
                     </div>
                   </div>
                 </div>
@@ -637,25 +1170,88 @@
                 <div class="stat-card">
                   <div class="stat-icon">🏆</div>
                   <div class="stat-info">
-                    <div class="stat-label">第二止盈</div>
+                    <div class="stat-label">最终止盈点</div>
                     <div class="stat-control">
-                      <el-slider v-model="currentConfig.takeProfit2" :min="1" :max="20" :step="0.5" :disabled="isPaused" />
-                      <span class="stat-unit">+{{ currentConfig.takeProfit2 }}%</span>
+                      <el-input-number v-model="currentConfig.bandTradeFinalReduceAt" :min="3" :max="15" :step="0.5" :disabled="isPaused" />
+                      <span class="stat-unit">%</span>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
-            <!-- 动态止盈百分比 -->
-            <div class="param-grid two-col" style="margin-top: 12px;">
+            <div v-if="currentConfig.bandTradeEnabled" class="config-tip" style="margin-top: 12px;">
+              <span class="tip-icon">💡</span>
+              <span>示例：盈利1.5%减仓30% → 盈利3%减仓50% → 盈利6%清仓</span>
+            </div>
+          </div>
+
+          <!-- 小盈减仓 -->
+          <div class="config-section">
+            <div class="toggle-card" :class="{ active: currentConfig.smallProfitReduceEnabled }">
+              <div class="toggle-info">
+                <div class="toggle-title">小盈减仓</div>
+                <div class="toggle-desc">盈利达到止盈线一定比例且仓位较大时提前减仓</div>
+              </div>
+              <el-switch v-model="currentConfig.smallProfitReduceEnabled" :disabled="isPaused" />
+            </div>
+            <div v-if="currentConfig.smallProfitReduceEnabled" class="param-grid three-col" style="margin-top: 16px;">
               <div class="param-item">
                 <div class="stat-card">
-                  <div class="stat-icon">📈</div>
+                  <div class="stat-icon">📊</div>
                   <div class="stat-info">
-                    <div class="stat-label">动态止盈百分比</div>
+                    <div class="stat-label">触发阈值</div>
                     <div class="stat-control">
-                      <el-slider v-model="currentConfig.takeProfitPercent" :min="1" :max="10" :step="0.5" :disabled="isPaused" />
-                      <span class="stat-unit">+{{ currentConfig.takeProfitPercent }}%</span>
+                      <el-input-number v-model="currentConfig.smallProfitReduceThresholdPercent" :min="20" :max="80" :step="5" :disabled="isPaused" />
+                      <span class="stat-unit">%止盈线</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="param-item">
+                <div class="stat-card">
+                  <div class="stat-icon">💰</div>
+                  <div class="stat-info">
+                    <div class="stat-label">仓位阈值</div>
+                    <div class="stat-control">
+                      <el-input-number v-model="currentConfig.smallProfitReducePositionThreshold" :min="5" :max="30" :step="1" :disabled="isPaused" />
+                      <span class="stat-unit">%</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="param-item">
+                <div class="stat-card">
+                  <div class="stat-icon">📉</div>
+                  <div class="stat-info">
+                    <div class="stat-label">减仓比例</div>
+                    <div class="stat-control">
+                      <el-input-number v-model="currentConfig.smallProfitReduceRatio" :min="20" :max="80" :step="5" :disabled="isPaused" />
+                      <span class="stat-unit">%</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 止盈限价单 -->
+          <div class="config-section">
+            <div class="toggle-card" :class="{ active: currentConfig.takeProfitLimitOrderEnabled }">
+              <div class="toggle-info">
+                <div class="toggle-title">止盈限价单</div>
+                <div class="toggle-desc">开仓时自动挂止盈限价单，到达目标自动成交</div>
+              </div>
+              <el-switch v-model="currentConfig.takeProfitLimitOrderEnabled" :disabled="isPaused" />
+            </div>
+            <div v-if="currentConfig.takeProfitLimitOrderEnabled" class="param-grid" style="margin-top: 16px;">
+              <div class="param-item">
+                <div class="stat-card">
+                  <div class="stat-icon">📋</div>
+                  <div class="stat-info">
+                    <div class="stat-label">止盈仓位比例</div>
+                    <div class="stat-control">
+                      <el-slider v-model="currentConfig.takeProfitOrderPartial" :min="0.1" :max="1" :step="0.1" :disabled="isPaused" />
+                      <span class="stat-unit">{{ Math.round(currentConfig.takeProfitOrderPartial * 100) }}%</span>
                     </div>
                   </div>
                 </div>
@@ -689,6 +1285,85 @@
                     </div>
                   </div>
                 </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- AI策略迭代 -->
+          <div class="config-section">
+            <div class="toggle-card" :class="{ active: aiEvolutionConfig.enabled }">
+              <div class="toggle-info">
+                <div class="toggle-title">AI策略迭代</div>
+                <div class="toggle-desc">启用AI分析交易数据，自动优化止盈止损参数</div>
+              </div>
+              <el-switch v-model="aiEvolutionConfig.enabled" :disabled="isPaused" @change="updateAiEvolutionConfig" />
+            </div>
+            
+            <div v-if="aiEvolutionConfig.enabled" class="param-grid three-col" style="margin-top: 16px;">
+              <div class="param-item">
+                <div class="stat-card">
+                  <div class="stat-icon">🤖</div>
+                  <div class="stat-info">
+                    <div class="stat-label">自动应用建议</div>
+                    <div class="stat-control">
+                      <el-switch v-model="aiEvolutionConfig.autoApply" :disabled="isPaused" @change="updateAiEvolutionConfig" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="param-item">
+                <div class="stat-card">
+                  <div class="stat-icon">📊</div>
+                  <div class="stat-info">
+                    <div class="stat-label">最少交易数</div>
+                    <div class="stat-control">
+                      <el-input-number v-model="aiEvolutionConfig.minTrades" :min="5" :max="50" :disabled="isPaused" @change="updateAiEvolutionConfig" />
+                      <span class="stat-unit">笔</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="param-item">
+                <div class="stat-card">
+                  <div class="stat-icon">⏰</div>
+                  <div class="stat-info">
+                    <div class="stat-label">分析间隔</div>
+                    <div class="stat-control">
+                      <el-input-number v-model="aiEvolutionConfig.intervalHours" :min="1" :max="72" :disabled="isPaused" @change="updateAiEvolutionConfig" />
+                      <span class="stat-unit">小时</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="param-item">
+                <div class="stat-card">
+                  <div class="stat-icon">🎯</div>
+                  <div class="stat-info">
+                    <div class="stat-label">置信度阈值</div>
+                    <div class="stat-control">
+                      <el-slider v-model="aiEvolutionConfig.confidenceThreshold" :min="0.5" :max="1" :step="0.05" :disabled="isPaused" @change="updateAiEvolutionConfig" />
+                      <span class="stat-unit">{{ (aiEvolutionConfig.confidenceThreshold * 100).toFixed(0) }}%</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div v-if="aiEvolutionConfig.enabled" style="margin-top: 16px;">
+              <div class="config-tip">
+                <span class="tip-icon">💡</span>
+                <span>AI将分析交易表现，给出止盈止损参数优化建议。置信度越高，建议越可靠。</span>
+              </div>
+              <div style="display: flex; gap: 12px; margin-top: 12px;">
+                <el-button type="primary" :loading="aiAnalyzing" @click="triggerAiAnalysis" :disabled="isPaused">
+                  {{ aiAnalyzing ? 'AI分析中...' : '手动触发AI分析' }}
+                </el-button>
+                <el-button @click="showAiSuggestions" :disabled="isPaused">
+                  查看待确认建议 ({{ pendingSuggestionsCount }})
+                </el-button>
+              </div>
+              <div v-if="lastAiAnalysis" style="margin-top: 12px; font-size: 12px; color: #888;">
+                上次分析: {{ lastAiAnalysis }}
               </div>
             </div>
           </div>
@@ -1246,169 +1921,6 @@
           </div>
 
           <div class="config-section">
-            <div class="section-title">智能止损</div>
-            <div class="toggle-card" :class="{ active: smartTradingConfig.smart_stop_loss_enabled }">
-              <div class="toggle-info">
-                <div class="toggle-title">启用智能止损</div>
-                <div class="toggle-desc">根据趋势评分动态调整止损</div>
-              </div>
-              <el-switch v-model="smartTradingConfig.smart_stop_loss_enabled" :disabled="isPaused" />
-            </div>
-            <div v-if="smartTradingConfig.smart_stop_loss_enabled" class="param-grid three-col" style="margin-top: 16px;">
-              <div class="param-item">
-                <div class="stat-card">
-                  <div class="stat-icon">🛡️</div>
-                  <div class="stat-info">
-                    <div class="stat-label">趋势≥8分止损</div>
-                    <div class="stat-control">
-                      <el-input-number v-model="smartTradingConfig.stop_loss_trend_8_plus" :min="-15" :max="-3" :step="0.5" :disabled="isPaused" />
-                      <span class="stat-unit">%</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div class="param-item">
-                <div class="stat-card">
-                  <div class="stat-icon">🛡️</div>
-                  <div class="stat-info">
-                    <div class="stat-label">趋势6-7分止损</div>
-                    <div class="stat-control">
-                      <el-input-number v-model="smartTradingConfig.stop_loss_trend_6_7" :min="-10" :max="-3" :step="0.5" :disabled="isPaused" />
-                      <span class="stat-unit">%</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div class="param-item">
-                <div class="stat-card">
-                  <div class="stat-icon">🛡️</div>
-                  <div class="stat-info">
-                    <div class="stat-label">默认止损</div>
-                    <div class="stat-control">
-                      <el-input-number v-model="smartTradingConfig.stop_loss_trend_default" :min="-8" :max="-2" :step="0.5" :disabled="isPaused" />
-                      <span class="stat-unit">%</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div v-if="smartTradingConfig.smart_stop_loss_enabled" class="param-grid two-col" style="margin-top: 16px;">
-              <div class="param-item">
-                <div class="stat-card">
-                  <div class="stat-icon">⏱️</div>
-                  <div class="stat-info">
-                    <div class="stat-label">持仓时间保护</div>
-                    <div class="stat-control">
-                      <el-switch v-model="smartTradingConfig.stop_loss_time_protection_enabled" :disabled="isPaused" />
-                      <span class="stat-unit">{{ smartTradingConfig.stop_loss_time_protection_enabled ? '开' : '关' }}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div class="param-item" v-if="smartTradingConfig.stop_loss_time_protection_enabled">
-                <div class="stat-card">
-                  <div class="stat-icon">⏱️</div>
-                  <div class="stat-info">
-                    <div class="stat-label">保护时间</div>
-                    <div class="stat-control">
-                      <el-input-number v-model="smartTradingConfig.stop_loss_time_protection_minutes" :min="15" :max="120" :step="5" :disabled="isPaused" />
-                      <span class="stat-unit">分钟</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="config-section">
-            <div class="section-title">动态止盈</div>
-            <div class="toggle-card" :class="{ active: smartTradingConfig.dynamic_take_profit_enabled }">
-              <div class="toggle-info">
-                <div class="toggle-title">启用动态止盈</div>
-                <div class="toggle-desc">根据趋势评分动态调整止盈目标</div>
-              </div>
-              <el-switch v-model="smartTradingConfig.dynamic_take_profit_enabled" :disabled="isPaused" />
-            </div>
-            <div v-if="smartTradingConfig.dynamic_take_profit_enabled" class="param-grid three-col" style="margin-top: 16px;">
-              <div class="param-item">
-                <div class="stat-card">
-                  <div class="stat-icon">🎯</div>
-                  <div class="stat-info">
-                    <div class="stat-label">趋势9-10分</div>
-                    <div class="stat-control">
-                      <el-input-number v-model="smartTradingConfig.take_profit_trend_9_10" :min="5" :max="20" :step="1" :disabled="isPaused" />
-                      <span class="stat-unit">%</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div class="param-item">
-                <div class="stat-card">
-                  <div class="stat-icon">🎯</div>
-                  <div class="stat-info">
-                    <div class="stat-label">趋势7-8分</div>
-                    <div class="stat-control">
-                      <el-input-number v-model="smartTradingConfig.take_profit_trend_7_8" :min="5" :max="15" :step="0.5" :disabled="isPaused" />
-                      <span class="stat-unit">%</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div class="param-item">
-                <div class="stat-card">
-                  <div class="stat-icon">🎯</div>
-                  <div class="stat-info">
-                    <div class="stat-label">趋势5-6分</div>
-                    <div class="stat-control">
-                      <el-input-number v-model="smartTradingConfig.take_profit_trend_5_6" :min="3" :max="12" :step="0.5" :disabled="isPaused" />
-                      <span class="stat-unit">%</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div class="param-item">
-                <div class="stat-card">
-                  <div class="stat-icon">🎯</div>
-                  <div class="stat-info">
-                    <div class="stat-label">默认止盈</div>
-                    <div class="stat-control">
-                      <el-input-number v-model="smartTradingConfig.take_profit_trend_default" :min="3" :max="10" :step="0.5" :disabled="isPaused" />
-                      <span class="stat-unit">%</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div class="param-grid two-col" style="margin-top: 8px;">
-              <div class="param-item">
-                <div class="stat-card">
-                  <div class="stat-icon">📊</div>
-                  <div class="stat-info">
-                    <div class="stat-label">止盈评分阈值</div>
-                    <div class="stat-control" style="display: flex; gap: 4px;">
-                      <el-input-number v-model="smartTradingConfig.take_profit_score_tier1" :min="1" :max="10" :disabled="isPaused" controls-position="right" style="width: 70px;" />
-                      <el-input-number v-model="smartTradingConfig.take_profit_score_tier2" :min="1" :max="10" :disabled="isPaused" controls-position="right" style="width: 70px;" />
-                      <el-input-number v-model="smartTradingConfig.take_profit_score_tier3" :min="1" :max="10" :disabled="isPaused" controls-position="right" style="width: 70px;" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div class="param-item">
-                <div class="stat-card">
-                  <div class="stat-icon">📊</div>
-                  <div class="stat-info">
-                    <div class="stat-label">止损评分阈值</div>
-                    <div class="stat-control" style="display: flex; gap: 4px;">
-                      <el-input-number v-model="smartTradingConfig.stop_loss_score_tier1" :min="1" :max="10" :disabled="isPaused" controls-position="right" style="width: 70px;" />
-                      <el-input-number v-model="smartTradingConfig.stop_loss_score_tier2" :min="1" :max="10" :disabled="isPaused" controls-position="right" style="width: 70px;" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="config-section">
             <div class="section-title">时间衰减止损</div>
             <div class="toggle-card" :class="{ active: smartTradingConfig.time_decay_enabled }">
               <div class="toggle-info">
@@ -1418,92 +1930,6 @@
               <div class="toggle-control">
                 <el-input-number v-if="smartTradingConfig.time_decay_enabled" v-model="smartTradingConfig.time_decay_factor" :min="0.05" :max="0.5" :step="0.05" :precision="2" :disabled="isPaused" controls-position="right" />
                 <el-switch v-model="smartTradingConfig.time_decay_enabled" :disabled="isPaused" active-text="开" inactive-text="关" />
-              </div>
-            </div>
-          </div>
-
-          <div class="config-section">
-            <div class="section-title">小盈减仓</div>
-            <div class="toggle-card" :class="{ active: smartTradingConfig.small_profit_reduce_enabled }">
-              <div class="toggle-info">
-                <div class="toggle-title">启用小盈减仓</div>
-                <div class="toggle-desc">盈利≥50%止盈线且仓位>15%时减50%</div>
-              </div>
-              <el-switch v-model="smartTradingConfig.small_profit_reduce_enabled" :disabled="isPaused" />
-            </div>
-            <div v-if="smartTradingConfig.small_profit_reduce_enabled" class="param-grid two-col" style="margin-top: 16px;">
-              <div class="param-item">
-                <div class="stat-card">
-                  <div class="stat-icon">📉</div>
-                  <div class="stat-info">
-                    <div class="stat-label">止盈线%</div>
-                    <div class="stat-control">
-                      <el-input-number v-model="smartTradingConfig.small_profit_reduce_threshold_percent" :min="30" :max="80" :step="5" :disabled="isPaused" />
-                      <span class="stat-unit">%</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div class="param-item">
-                <div class="stat-card">
-                  <div class="stat-icon">📊</div>
-                  <div class="stat-info">
-                    <div class="stat-label">仓位&gt;</div>
-                    <div class="stat-control">
-                      <el-input-number v-model="smartTradingConfig.small_profit_reduce_position_threshold" :min="10" :max="30" :step="1" :disabled="isPaused" />
-                      <span class="stat-unit">%</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="config-section">
-            <div class="section-title">波段操作</div>
-            <div class="toggle-card" :class="{ active: smartTradingConfig.band_trade_enabled }">
-              <div class="toggle-info">
-                <div class="toggle-title">启用波段操作</div>
-                <div class="toggle-desc">分层减仓止盈</div>
-              </div>
-              <el-switch v-model="smartTradingConfig.band_trade_enabled" :disabled="isPaused" />
-            </div>
-            <div v-if="smartTradingConfig.band_trade_enabled" class="param-grid three-col" style="margin-top: 16px;">
-              <div class="param-item">
-                <div class="stat-card">
-                  <div class="stat-icon">📊</div>
-                  <div class="stat-info">
-                    <div class="stat-label">第1层</div>
-                    <div class="stat-control">
-                      <el-input-number v-model="smartTradingConfig.band_trade_reduce_at" :min="0.5" :max="5" :step="0.5" :precision="1" :disabled="isPaused" />
-                      <span class="stat-unit">%</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div class="param-item">
-                <div class="stat-card">
-                  <div class="stat-icon">📊</div>
-                  <div class="stat-info">
-                    <div class="stat-label">第2层</div>
-                    <div class="stat-control">
-                      <el-input-number v-model="smartTradingConfig.band_trade_second_reduce_at" :min="1" :max="10" :step="0.5" :precision="1" :disabled="isPaused" />
-                      <span class="stat-unit">%</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div class="param-item">
-                <div class="stat-card">
-                  <div class="stat-icon">📊</div>
-                  <div class="stat-info">
-                    <div class="stat-label">第3层(清仓)</div>
-                    <div class="stat-control">
-                      <el-input-number v-model="smartTradingConfig.band_trade_final_reduce_at" :min="2" :max="15" :step="0.5" :precision="1" :disabled="isPaused" />
-                      <span class="stat-unit">%</span>
-                    </div>
-                  </div>
-                </div>
               </div>
             </div>
           </div>
@@ -2035,55 +2461,6 @@
           </div>
         </div>
 
-        <!-- 止盈单管理 -->
-        <div v-show="activeNav === 'take-profit-order'" class="config-panel">
-          <div class="panel-header">
-            <h2 class="panel-title">止盈单管理</h2>
-            <p class="panel-desc">自动挂止盈限价单</p>
-          </div>
-
-          <div class="config-section">
-            <div class="toggle-card" :class="{ active: takeProfitOrderConfig.enabled }">
-              <div class="toggle-info">
-                <div class="toggle-title">启用止盈单</div>
-                <div class="toggle-desc">自动挂止盈限价单</div>
-              </div>
-              <el-switch v-model="takeProfitOrderConfig.enabled" :disabled="isPaused" />
-            </div>
-          </div>
-
-          <div v-if="takeProfitOrderConfig.enabled" class="config-section">
-            <div class="section-title">止盈单配置</div>
-            <div class="param-grid two-col">
-              <div class="param-item">
-                <div class="stat-card">
-                  <div class="stat-icon">🎯</div>
-                  <div class="stat-info">
-                    <div class="stat-label">止盈仓位</div>
-                    <div class="stat-control">
-                      <el-input-number v-model="takeProfitOrderConfig.partialPercent" :min="10" :max="100" :step="5" :disabled="isPaused" />
-                      <span class="stat-unit">%</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div class="param-item">
-                <div class="stat-card">
-                  <div class="stat-icon">📊</div>
-                  <div class="stat-info">
-                    <div class="stat-label">舆情差时收紧止盈</div>
-                    <div class="stat-control">
-                      <el-input-number v-model="takeProfitOrderConfig.badSentimentThreshold" :min="1" :max="5" :step="1" :disabled="isPaused || !takeProfitOrderConfig.adjustOnBadSentiment" controls-position="right" />
-                      <span class="stat-unit">分</span>
-                    </div>
-                    <el-switch v-model="takeProfitOrderConfig.adjustOnBadSentiment" :disabled="isPaused" active-text="开" inactive-text="关" />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
         <!-- 顶部做空 -->
         <div v-show="activeNav === 'short-dip'" class="config-panel">
           <div class="panel-header">
@@ -2480,7 +2857,8 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { QuestionFilled } from '@element-plus/icons-vue'
 
 const isPaused = ref(false)
 const activeNav = ref('basic')
@@ -2561,7 +2939,54 @@ const longConfig = ref({
   pyramidMaxTrendScore: 6,
   pyramidLayerRatios: '1.0,0.6,0.35,0.2',
   pyramidBaseAmount: 25,
-  minCashReserve: 15
+  minCashReserve: 15,
+  sentimentFusionEnabled: false,
+  sentimentFusionMode: 'free',
+  sentimentCoingeckoWeight: 30,
+  sentimentFearGreedWeight: 30,
+  sentimentNewsWeight: 20,
+  sentimentTechnicalWeight: 40,
+  sentimentBearishAlertThreshold: 3,
+  sentimentFetchTimeout: 5.0,
+  resonanceMinTotalScore: 6,
+  resonanceMinCapitalFlowScore: 4,
+  resonanceSentimentWeight: 30,
+  resonanceTechnicalWeight: 25,
+  resonanceCapitalFlowWeight: 25,
+  resonanceMarketEnvWeight: 20,
+  technicalMinPassCount: 2,
+  technicalTrendScoreThreshold: 5,
+  technicalRsiMin: 30,
+  technicalRsiMax: 80,
+  technicalVolumeRatioMin: 0.8,
+  technicalMa5Tolerance: 0.98,
+  technicalVolatilityMin: 0.2,
+  // 做多智能止损（趋势档位）
+  smartStopLossEnabled: true,
+  stopLossTrend8Plus: 3.0,
+  stopLossTrend67: 2.0,
+  stopLossTrendDefault: 1.5,
+  // 做多动态止盈（趋势档位）
+  dynamicTakeProfitEnabled: true,
+  takeProfitTrend910: 15.0,
+  takeProfitTrend78: 10.0,
+  takeProfitTrend56: 8.0,
+  takeProfitTrendDefault: 6.0,
+  // 做多分层减仓止盈
+  bandTradeEnabled: true,
+  bandTradeReduceAt: 1.5,
+  bandTradeReducePercent: 30.0,
+  bandTradeSecondReduceAt: 3.0,
+  bandTradeSecondReducePercent: 50.0,
+  bandTradeFinalReduceAt: 6.0,
+  // 做多小盈减仓
+  smallProfitReduceEnabled: true,
+  smallProfitReduceThresholdPercent: 50.0,
+  smallProfitReducePositionThreshold: 15.0,
+  smallProfitReduceRatio: 50.0,
+  // 做多止盈限价单
+  takeProfitLimitOrderEnabled: true,
+  takeProfitOrderPartial: 0.5
 })
 
 const shortConfig = ref({
@@ -2608,7 +3033,54 @@ const shortConfig = ref({
   exemptionLossHigh: 60,
   exemptionLossMedium: 45,
   exemptionProfit: 30,
-  minCashReserve: 30
+  minCashReserve: 30,
+  sentimentFusionEnabled: false,
+  sentimentFusionMode: 'free',
+  sentimentCoingeckoWeight: 30,
+  sentimentFearGreedWeight: 30,
+  sentimentNewsWeight: 20,
+  sentimentTechnicalWeight: 40,
+  sentimentBearishAlertThreshold: 3,
+  sentimentFetchTimeout: 5.0,
+  resonanceMinTotalScore: 6,
+  resonanceMinCapitalFlowScore: 4,
+  resonanceSentimentWeight: 30,
+  resonanceTechnicalWeight: 25,
+  resonanceCapitalFlowWeight: 25,
+  resonanceMarketEnvWeight: 20,
+  technicalMinPassCount: 2,
+  technicalTrendScoreThreshold: 5,
+  technicalRsiMin: 30,
+  technicalRsiMax: 80,
+  technicalVolumeRatioMin: 0.8,
+  technicalMa5Tolerance: 0.98,
+  technicalVolatilityMin: 0.2,
+  // 做空智能止损（趋势档位）
+  smartStopLossEnabled: true,
+  stopLossTrend02: 3.0,
+  stopLossTrend34: 2.0,
+  stopLossTrendDefault: 1.5,
+  // 做空动态止盈（趋势档位）
+  dynamicTakeProfitEnabled: true,
+  takeProfitTrend01: 15.0,
+  takeProfitTrend23: 10.0,
+  takeProfitTrend4: 8.0,
+  takeProfitTrendDefault: 6.0,
+  // 做空分层减仓止盈
+  bandTradeEnabled: true,
+  bandTradeReduceAt: 1.5,
+  bandTradeReducePercent: 30.0,
+  bandTradeSecondReduceAt: 3.0,
+  bandTradeSecondReducePercent: 50.0,
+  bandTradeFinalReduceAt: 6.0,
+  // 做空小盈减仓
+  smallProfitReduceEnabled: true,
+  smallProfitReduceThresholdPercent: 50.0,
+  smallProfitReducePositionThreshold: 15.0,
+  smallProfitReduceRatio: 50.0,
+  // 做空止盈限价单
+  takeProfitLimitOrderEnabled: true,
+  takeProfitOrderPartial: 0.5
 })
 
 watch(() => longConfig.value.rsiRange, (newVal) => {
@@ -2697,11 +3169,22 @@ const riskConfig = ref({
   goldStablecoinSpecialHandling: true,
   goldStablecoinList: 'XAUT,PAXG',
   goldStablecoinTakeProfit: 0.2,
-  // 多空互斥决策配置
   mutualExclusiveEnabled: true,
   mutualExclusiveMinScore: 60.0,
   mutualExclusiveScoreDiff: 15.0
 })
+
+const aiEvolutionConfig = ref({
+  enabled: false,
+  autoApply: false,
+  minTrades: 10,
+  intervalHours: 24,
+  confidenceThreshold: 0.7
+})
+
+const aiAnalyzing = ref(false)
+const pendingSuggestionsCount = ref(0)
+const lastAiAnalysis = ref('')
 
 const v42Features = ref({
   timezoneAware: true,
@@ -3081,13 +3564,89 @@ async function saveAll() {
   }
 }
 
+async function updateAiEvolutionConfig() {
+  try {
+    const res = await fetch('/api/v1/services/evolution/ai-config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ai_evolution_enabled: aiEvolutionConfig.value.enabled,
+        ai_evolution_auto_apply: aiEvolutionConfig.value.autoApply,
+        ai_evolution_min_trades: aiEvolutionConfig.value.minTrades,
+        ai_evolution_interval_hours: aiEvolutionConfig.value.intervalHours,
+        ai_evolution_confidence_threshold: aiEvolutionConfig.value.confidenceThreshold
+      })
+    })
+    if (res.ok) {
+      ElMessage.success('AI迭代配置已保存')
+    }
+  } catch (e) {
+    ElMessage.error('保存AI迭代配置失败')
+  }
+}
+
+async function triggerAiAnalysis() {
+  aiAnalyzing.value = true
+  try {
+    const res = await fetch(`/api/v1/services/evolution/ai-analyze?side=${tradeDirection.value}`, {
+      method: 'POST'
+    })
+    const data = await res.json()
+    if (data.success) {
+      ElMessage.success('AI分析完成')
+      lastAiAnalysis.value = new Date().toLocaleString()
+      if (data.suggestion) {
+        pendingSuggestionsCount.value++
+      }
+    } else {
+      ElMessage.warning(data.message || 'AI分析失败')
+    }
+  } catch (e) {
+    ElMessage.error('AI分析请求失败')
+  } finally {
+    aiAnalyzing.value = false
+  }
+}
+
+async function showAiSuggestions() {
+  try {
+    const res = await fetch('/api/v1/services/evolution/pending-suggestions')
+    const data = await res.json()
+    if (data.success && data.suggestions.length > 0) {
+      const suggestion = data.suggestions[0]
+      ElMessageBox.confirm(
+        `${suggestion.analysis}\n\n建议内容:\n${JSON.stringify(suggestion.suggestion, null, 2)}\n\n置信度: ${(suggestion.confidence * 100).toFixed(0)}%`,
+        'AI策略建议',
+        {
+          confirmButtonText: '应用建议',
+          cancelButtonText: '忽略',
+          type: 'info'
+        }
+      ).then(async () => {
+        const applyRes = await fetch(`/api/v1/services/evolution/apply-pending?suggestion_id=${suggestion.timestamp}`)
+        if (applyRes.ok) {
+          ElMessage.success('AI建议已应用')
+          pendingSuggestionsCount.value = Math.max(0, pendingSuggestionsCount.value - 1)
+          await loadAll()
+        }
+      }).catch(() => {
+        ElMessage.info('已忽略建议')
+      })
+    } else {
+      ElMessage.info('暂无待确认的AI建议')
+    }
+  } catch (e) {
+    ElMessage.error('获取AI建议失败')
+  }
+}
+
 async function resetAll() {
   ElMessage.info('已恢复默认配置')
 }
 
 async function loadAll() {
   try {
-    const [longRes, shortRes, riskRes, smartRes, v42Res, settingsRes, bearishRes, bullishRes, shortDipRes, shortCrashRes, simBalanceRes, dipBuyRes, crashReboundRes, takeProfitRes, sparrowRes] = await Promise.all([
+    const [longRes, shortRes, riskRes, smartRes, v42Res, settingsRes, bearishRes, bullishRes, shortDipRes, shortCrashRes, simBalanceRes, dipBuyRes, crashReboundRes, takeProfitRes, sparrowRes, aiRes] = await Promise.all([
       fetch('/api/v1/trading/long-config'),
       fetch('/api/v1/trading/short-config'),
       fetch('/api/v1/trading/risk-config'),
@@ -3102,7 +3661,8 @@ async function loadAll() {
       fetch('/api/v1/services/config/dip-buy'),
       fetch('/api/v1/services/config/crash-rebound'),
       fetch('/api/v1/services/config/take-profit-order'),
-      fetch('/api/v1/services/sparrow-config')
+      fetch('/api/v1/services/sparrow-config'),
+      fetch('/api/v1/services/evolution/ai-config')
     ])
 
     if (longRes.ok) {
@@ -3281,6 +3841,16 @@ async function loadAll() {
         data.check_interval.fixed = 5
       }
       Object.assign(sparrowConfig.value, data)
+    }
+    if (aiRes.ok) {
+      const data = await aiRes.json()
+      aiEvolutionConfig.value.enabled = data.ai_evolution_enabled || false
+      aiEvolutionConfig.value.autoApply = data.ai_evolution_auto_apply || false
+      aiEvolutionConfig.value.minTrades = data.ai_evolution_min_trades || 10
+      aiEvolutionConfig.value.intervalHours = data.ai_evolution_interval_hours || 24
+      aiEvolutionConfig.value.confidenceThreshold = data.ai_evolution_confidence_threshold || 0.7
+      lastAiAnalysis.value = data.last_ai_analysis || ''
+      pendingSuggestionsCount.value = data.pending_suggestions_count || 0
     }
     if (simBalanceRes.ok) {
       const data = await simBalanceRes.json()
@@ -3618,6 +4188,26 @@ onMounted(() => {
     margin-bottom: 16px;
     padding-bottom: 8px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+}
+
+.config-tip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 8px;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+
+  .tip-icon {
+    font-size: 14px;
   }
 }
 

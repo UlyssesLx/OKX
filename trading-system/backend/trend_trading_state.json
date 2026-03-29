@@ -1,0 +1,33 @@
+{
+  "config": {
+    "trade_size": 10.0,
+    "max_positions": 2,
+    "max_total_position": 60.0,
+    "entry_lookback": 20,
+    "min_rsi": 50.0,
+    "max_rsi": 80.0,
+    "volume_multiplier": 1.5,
+    "trailing_stop": true,
+    "trailing_stop_percent": 3.0,
+    "max_daily_trades": 5,
+    "max_daily_loss": 20.0,
+    "cooldown_minutes": 30,
+    "watch_list": [
+      "BTC-USDT",
+      "ETH-USDT",
+      "SOL-USDT",
+      "DOGE-USDT",
+      "XRP-USDT"
+    ],
+    "_stop_loss_percent": -1.0,
+    "_take_profit_percent": 5.0
+  },
+  "positions": {},
+  "trades": [],
+  "daily_stats": {
+    "date": "2026-03-27",
+    "trade_count": 0,
+    "loss": 0.0
+  },
+  "last_buy_time": {}
+}

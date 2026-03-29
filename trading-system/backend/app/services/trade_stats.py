@@ -37,6 +37,8 @@ class TradeRecord(BaseModel):
     pnl: float = 0.0
     side: str = "long"
     is_simulation: bool = True  # 默认为模拟盘
+    is_swap: bool = False  # 是否为合约交易
+    leverage: float = 1.0  # 杠杆倍数
 
 
 class TradeLog(BaseModel):
@@ -115,14 +117,21 @@ class TradeStats:
             if t.coin == coin and t.time.startswith(today)
         ]
     
-    def calculate_stats(self) -> Optional[Dict[str, Any]]:
+    def calculate_stats(self, is_simulation: Optional[bool] = None) -> Optional[Dict[str, Any]]:
         trades = self.trade_log.trades
+        
+        if is_simulation is not None:
+            trades = [t for t in trades if t.is_simulation == is_simulation]
         
         if not trades:
             return None
         
-        buy_trades = [t for t in trades if t.action == "buy"]
-        sell_trades = [t for t in trades if t.action == "sell"]
+        open_long_trades = [t for t in trades if t.action == "buy"]
+        close_long_trades = [t for t in trades if t.action == "sell"]
+        open_short_trades = [t for t in trades if t.action == "sell_short"]
+        close_short_trades = [t for t in trades if t.action == "buy_short"]
+        
+        all_close_trades = close_long_trades + close_short_trades
         
         total_profit = 0.0
         total_loss = 0.0
@@ -131,7 +140,16 @@ class TradeStats:
         take_profit_sells = 0
         stop_loss_sells = 0
         
-        for t in sell_trades:
+        long_profit = 0.0
+        long_loss = 0.0
+        long_win = 0
+        long_loss_count = 0
+        short_profit = 0.0
+        short_loss = 0.0
+        short_win = 0
+        short_loss_count = 0
+        
+        for t in close_long_trades:
             pnl = t.pnl
             
             if "止盈" in t.reason or "盈利" in t.reason:
@@ -139,21 +157,46 @@ class TradeStats:
                 if pnl > 0:
                     total_profit += pnl
                     profit_count += 1
+                    long_profit += pnl
+                    long_win += 1
                 else:
                     total_loss += abs(pnl)
                     loss_count += 1
+                    long_loss += abs(pnl)
+                    long_loss_count += 1
             elif "止损" in t.reason or "亏损" in t.reason:
                 stop_loss_sells += 1
-                total_loss += abs(pnl) if pnl < 0 else 0
-                loss_count += 1
+                if pnl < 0:
+                    total_loss += abs(pnl)
+                    loss_count += 1
+                    long_loss += abs(pnl)
+                    long_loss_count += 1
             elif pnl > 0:
                 total_profit += pnl
                 profit_count += 1
+                long_profit += pnl
+                long_win += 1
             elif pnl < 0:
                 total_loss += abs(pnl)
                 loss_count += 1
+                long_loss += abs(pnl)
+                long_loss_count += 1
         
-        win_rate = (profit_count / len(sell_trades) * 100) if sell_trades else 0
+        for t in close_short_trades:
+            pnl = t.pnl
+            
+            if pnl > 0:
+                total_profit += pnl
+                profit_count += 1
+                short_profit += pnl
+                short_win += 1
+            elif pnl < 0:
+                total_loss += abs(pnl)
+                loss_count += 1
+                short_loss += abs(pnl)
+                short_loss_count += 1
+        
+        win_rate = (profit_count / len(all_close_trades) * 100) if all_close_trades else 0
         avg_profit = total_profit / profit_count if profit_count else 0
         avg_loss = total_loss / loss_count if loss_count else 0
         profit_loss_ratio = avg_profit / avg_loss if avg_loss else 0
@@ -161,28 +204,64 @@ class TradeStats:
         coin_stats: Dict[str, Dict] = {}
         for t in trades:
             if t.coin not in coin_stats:
-                coin_stats[t.coin] = {"buys": 0, "sells": 0, "profit": 0, "loss": 0}
+                coin_stats[t.coin] = {
+                    "buys": 0, "sells": 0, "profit": 0, "loss": 0,
+                    "open_long": 0, "close_long": 0,
+                    "open_short": 0, "close_short": 0,
+                    "long_profit": 0.0, "long_loss": 0.0,
+                    "short_profit": 0.0, "short_loss": 0.0,
+                    "long_win": 0, "long_loss_count": 0,
+                    "short_win": 0, "short_loss_count": 0
+                }
             
             if t.action == "buy":
                 coin_stats[t.coin]["buys"] += 1
-            else:
+                coin_stats[t.coin]["open_long"] += 1
+            elif t.action == "sell":
                 coin_stats[t.coin]["sells"] += 1
+                coin_stats[t.coin]["close_long"] += 1
                 if t.pnl > 0:
                     coin_stats[t.coin]["profit"] += 1
+                    coin_stats[t.coin]["long_win"] += 1
+                    coin_stats[t.coin]["long_profit"] += t.pnl
                 elif t.pnl < 0:
                     coin_stats[t.coin]["loss"] += 1
+                    coin_stats[t.coin]["long_loss_count"] += 1
+                    coin_stats[t.coin]["long_loss"] += abs(t.pnl)
+            elif t.action == "sell_short":
+                coin_stats[t.coin]["sells"] += 1
+                coin_stats[t.coin]["open_short"] += 1
+            elif t.action == "buy_short":
+                coin_stats[t.coin]["buys"] += 1
+                coin_stats[t.coin]["close_short"] += 1
+                if t.pnl > 0:
+                    coin_stats[t.coin]["profit"] += 1
+                    coin_stats[t.coin]["short_win"] += 1
+                    coin_stats[t.coin]["short_profit"] += t.pnl
+                elif t.pnl < 0:
+                    coin_stats[t.coin]["loss"] += 1
+                    coin_stats[t.coin]["short_loss_count"] += 1
+                    coin_stats[t.coin]["short_loss"] += abs(t.pnl)
         
         today = datetime.now(BEIJING_TZ).strftime("%Y-%m-%d")
         today_trades = [t for t in trades if t.time.startswith(today)]
-        today_buy = len([t for t in today_trades if t.action == "buy"])
-        today_sell = len([t for t in today_trades if t.action == "sell"])
-        today_volume = sum(t.amount for t in today_trades if t.action == "buy")
+        today_open_long = len([t for t in today_trades if t.action == "buy"])
+        today_close_long = len([t for t in today_trades if t.action == "sell"])
+        today_open_short = len([t for t in today_trades if t.action == "sell_short"])
+        today_close_short = len([t for t in today_trades if t.action == "buy_short"])
+        today_volume = sum(t.amount for t in today_trades if t.action in ["buy", "sell_short"])
         
         return {
             "summary": {
                 "total_trades": len(trades),
-                "buy_count": len(buy_trades),
-                "sell_count": len(sell_trades),
+                "open_count": len(open_long_trades) + len(open_short_trades),
+                "close_count": len(close_long_trades) + len(close_short_trades),
+                "open_long": len(open_long_trades),
+                "close_long": len(close_long_trades),
+                "open_short": len(open_short_trades),
+                "close_short": len(close_short_trades),
+                "buy_count": len(open_long_trades) + len(close_short_trades),
+                "sell_count": len(close_long_trades) + len(open_short_trades),
                 "take_profit_sells": take_profit_sells,
                 "stop_loss_sells": stop_loss_sells,
                 "win_rate": round(win_rate, 2),
@@ -191,14 +270,24 @@ class TradeStats:
                 "profit_loss_ratio": round(profit_loss_ratio, 2),
                 "total_profit": round(total_profit, 2),
                 "total_loss": round(total_loss, 2),
-                "net_profit": round(total_profit - total_loss, 2)
+                "net_profit": round(total_profit - total_loss, 2),
+                "long_profit": round(long_profit, 2),
+                "long_loss": round(long_loss, 2),
+                "short_profit": round(short_profit, 2),
+                "short_loss": round(short_loss, 2)
             },
             "coin_stats": coin_stats,
             "today": {
                 "date": today,
                 "trades": len(today_trades),
-                "buys": today_buy,
-                "sells": today_sell,
+                "opens": today_open_long + today_open_short,
+                "closes": today_close_long + today_close_short,
+                "open_long": today_open_long,
+                "close_long": today_close_long,
+                "open_short": today_open_short,
+                "close_short": today_close_short,
+                "buys": today_open_long + today_close_short,
+                "sells": today_close_long + today_open_short,
                 "volume": round(today_volume, 2)
             },
             "last_updated": datetime.now(BEIJING_TZ).isoformat()

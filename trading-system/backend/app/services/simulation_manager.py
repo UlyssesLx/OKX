@@ -110,7 +110,12 @@ class SimulationManager:
         try:
             if os.path.exists(self.positions_file):
                 with open(self.positions_file, 'r', encoding='utf-8') as f:
-                    data = json.load(f)
+                    content = f.read().strip()
+                    if not content:
+                        logger.warning(f"持仓文件为空，使用默认值")
+                        self._save_positions()
+                        return
+                    data = json.loads(content)
                     self.positions = {}
                     for k, v in data.get("positions", {}).items():
                         if "pyramid_layer_prices" not in v:
@@ -146,14 +151,23 @@ class SimulationManager:
                         logger.warning(f"余额不一致，自动修正: {self.available_balance:.2f} -> {expected_available:.2f}")
                         self.available_balance = expected_available
                         self._save_positions()
+        except json.JSONDecodeError as e:
+            logger.error(f"持仓文件JSON格式错误: {e}，将重置文件")
+            self._save_positions()
         except Exception as e:
             logger.error(f"加载模拟持仓失败: {e}")
         
         try:
             if os.path.exists(self.trades_file):
                 with open(self.trades_file, 'r', encoding='utf-8') as f:
-                    data = json.load(f)
+                    content = f.read().strip()
+                    if not content:
+                        logger.warning(f"交易记录文件为空，跳过加载")
+                        return
+                    data = json.loads(content)
                     self.trades = [SimulatedTrade(**t) for t in data]
+        except json.JSONDecodeError as e:
+            logger.error(f"交易记录文件JSON格式错误: {e}")
         except Exception as e:
             logger.error(f"加载模拟交易记录失败: {e}")
     
@@ -452,6 +466,18 @@ class SimulationManager:
         entry_time = datetime.fromisoformat(pos.entry_time)
         holding_time_minutes = (datetime.now(BEIJING_TZ) - entry_time).total_seconds() / 60
 
+        # 持仓时间保护：刚加仓后禁止止损/平仓（对齐 ai_trading_bot.js）
+        pyramid_add_time = getattr(pos, 'pyramid_add_time', None)
+        time_protection_minutes = getattr(trading_config, 'stop_loss_time_protection_minutes', 60) if trading_config else 60
+        if pyramid_add_time:
+            pyramid_holding_minutes = (datetime.now(BEIJING_TZ) - pyramid_add_time).total_seconds() / 60
+            if pyramid_holding_minutes < time_protection_minutes:
+                return {
+                    "should_sell": False,
+                    "reason": f"做多金字塔加仓后{pyramid_holding_minutes:.1f}分钟，时间保护未到期 ({time_protection_minutes}分钟)，禁止平仓",
+                    "sell_percent": 0
+                }
+
         if trading_config and trading_config.dynamic_bands_enabled:
             volatility_factor = min(2.0, max(0.5, volatility / 3)) if volatility > 0 else 1.0
             if turnover_24h > 1000000000:
@@ -461,33 +487,29 @@ class SimulationManager:
             else:
                 market_cap_factor = 0.6
 
-            if trading_config.dynamic_take_profit_enabled:
-                if trend_score >= trading_config.take_profit_score_tier1:
-                    base_take_profit = getattr(trading_config, 'take_profit_trend_9_10', 15.0)
-                elif trend_score >= trading_config.take_profit_score_tier2:
-                    base_take_profit = getattr(trading_config, 'take_profit_trend_7_8', 10.0)
-                elif trend_score >= trading_config.take_profit_score_tier3:
-                    base_take_profit = getattr(trading_config, 'take_profit_trend_5_6', 8.0)
+            if trading_config.long_dynamic_take_profit_enabled:
+                if trend_score >= 9:
+                    base_take_profit = getattr(trading_config, 'long_take_profit_trend_9_10', 15.0)
+                elif trend_score >= 7:
+                    base_take_profit = getattr(trading_config, 'long_take_profit_trend_7_8', 10.0)
+                elif trend_score >= 5:
+                    base_take_profit = getattr(trading_config, 'long_take_profit_trend_5_6', 8.0)
                 else:
-                    base_take_profit = getattr(trading_config, 'take_profit_trend_default', 6.0)
+                    base_take_profit = getattr(trading_config, 'long_take_profit_trend_default', 6.0)
             else:
                 base_take_profit = 6.0
 
-            if getattr(trading_config, 'smart_stop_loss_enabled', False):
-                stop_loss_score_tier1 = getattr(trading_config, 'stop_loss_score_tier1', 8)
-                stop_loss_score_tier2 = getattr(trading_config, 'stop_loss_score_tier2', 6)
-                if trend_score >= stop_loss_score_tier1:
-                    base_stop_loss = getattr(trading_config, 'stop_loss_trend_8_plus', -3.0)
-                elif trend_score >= stop_loss_score_tier2:
-                    base_stop_loss = getattr(trading_config, 'stop_loss_trend_6_7', -2.0)
+            if getattr(trading_config, 'long_smart_stop_loss_enabled', False):
+                if trend_score >= 8:
+                    base_stop_loss = -abs(getattr(trading_config, 'long_stop_loss_trend_8_plus', 3.0))
+                elif trend_score >= 6:
+                    base_stop_loss = -abs(getattr(trading_config, 'long_stop_loss_trend_6_7', 2.0))
                 else:
-                    base_stop_loss = getattr(trading_config, 'stop_loss_trend_default', -1.5)
+                    base_stop_loss = -abs(getattr(trading_config, 'long_stop_loss_trend_default', 1.5))
             else:
                 base_stop_loss = -3.0
 
-            stop_loss_score_tier1 = getattr(trading_config, 'stop_loss_score_tier1', 8)
-            stop_loss_score_tier2 = getattr(trading_config, 'stop_loss_score_tier2', 6)
-            trend_factor = 1.2 if trend_score >= stop_loss_score_tier1 else (1.0 if trend_score >= stop_loss_score_tier2 else 0.8)
+            trend_factor = 1.2 if trend_score >= 8 else (1.0 if trend_score >= 6 else 0.8)
             dynamic_stop_loss = base_stop_loss * volatility_factor * market_cap_factor * trend_factor
             dynamic_take_profit = base_take_profit * volatility_factor * market_cap_factor * trend_factor
 
@@ -543,67 +565,56 @@ class SimulationManager:
                 }
 
         else:
-            smart_stop_loss_enabled = getattr(trading_config, 'smart_stop_loss_enabled', settings.SMART_STOP_LOSS_ENABLED) if trading_config else settings.SMART_STOP_LOSS_ENABLED
-            if smart_stop_loss_enabled:
-                if getattr(trading_config, 'smart_stop_loss_enabled', False):
-                    stop_loss_score_tier1 = getattr(trading_config, 'stop_loss_score_tier1', 8)
-                    stop_loss_score_tier2 = getattr(trading_config, 'stop_loss_score_tier2', 6)
-                    if trend_score >= stop_loss_score_tier1:
-                        smart_stop_loss = getattr(trading_config, 'stop_loss_trend_8_plus', -3.0)
-                    elif trend_score >= stop_loss_score_tier2:
-                        smart_stop_loss = getattr(trading_config, 'stop_loss_trend_6_7', -2.0)
-                    else:
-                        smart_stop_loss = getattr(trading_config, 'stop_loss_trend_default', -1.5)
+            long_smart_stop_loss_enabled = getattr(trading_config, 'long_smart_stop_loss_enabled', True) if trading_config else True
+            if long_smart_stop_loss_enabled:
+                if trend_score >= 8:
+                    smart_stop_loss = -abs(getattr(trading_config, 'long_stop_loss_trend_8_plus', 3.0))
+                elif trend_score >= 6:
+                    smart_stop_loss = -abs(getattr(trading_config, 'long_stop_loss_trend_6_7', 2.0))
                 else:
-                    smart_stop_loss = settings.STOP_LOSS_TREND_DEFAULT
-                    if trend_score >= 8:
-                        smart_stop_loss = settings.STOP_LOSS_TREND_8_PLUS
-                    elif trend_score >= 6:
-                        smart_stop_loss = settings.STOP_LOSS_TREND_6_7
+                    smart_stop_loss = -abs(getattr(trading_config, 'long_stop_loss_trend_default', 1.5))
+            else:
+                smart_stop_loss = pos.stop_loss_percent
 
-                if pnl_percent <= smart_stop_loss:
-                    pyramid_on_stop_loss_enabled = getattr(trading_config, 'pyramid_on_stop_loss_enabled', settings.PYRAMID_ON_STOP_LOSS_ENABLED) if trading_config else settings.PYRAMID_ON_STOP_LOSS_ENABLED
-                    pyramid_on_stop_loss_trend_score = getattr(trading_config, 'pyramid_on_stop_loss_trend_score', settings.PYRAMID_ON_STOP_LOSS_TREND_SCORE) if trading_config else settings.PYRAMID_ON_STOP_LOSS_TREND_SCORE
-                    pyramid_on_stop_loss_max_position_percent = getattr(trading_config, 'pyramid_on_stop_loss_max_position_percent', settings.PYRAMID_ON_STOP_LOSS_MAX_POSITION_PERCENT) if trading_config else settings.PYRAMID_ON_STOP_LOSS_MAX_POSITION_PERCENT
-                    pyramid_on_stop_loss_min_cash = getattr(trading_config, 'pyramid_on_stop_loss_min_cash', settings.PYRAMID_ON_STOP_LOSS_MIN_CASH) if trading_config else settings.PYRAMID_ON_STOP_LOSS_MIN_CASH
-                    pyramid_max_layers = getattr(trading_config, 'smart_pyramid_max_layers', settings.PYRAMID_MAX_LAYERS) if trading_config else settings.PYRAMID_MAX_LAYERS
+            if pnl_percent <= smart_stop_loss:
+                pyramid_on_stop_loss_enabled = getattr(trading_config, 'pyramid_on_stop_loss_enabled', settings.PYRAMID_ON_STOP_LOSS_ENABLED) if trading_config else settings.PYRAMID_ON_STOP_LOSS_ENABLED
+                pyramid_on_stop_loss_trend_score = getattr(trading_config, 'pyramid_on_stop_loss_trend_score', settings.PYRAMID_ON_STOP_LOSS_TREND_SCORE) if trading_config else settings.PYRAMID_ON_STOP_LOSS_TREND_SCORE
+                pyramid_on_stop_loss_max_position_percent = getattr(trading_config, 'pyramid_on_stop_loss_max_position_percent', settings.PYRAMID_ON_STOP_LOSS_MAX_POSITION_PERCENT) if trading_config else settings.PYRAMID_ON_STOP_LOSS_MAX_POSITION_PERCENT
+                pyramid_on_stop_loss_min_cash = getattr(trading_config, 'pyramid_on_stop_loss_min_cash', settings.PYRAMID_ON_STOP_LOSS_MIN_CASH) if trading_config else settings.PYRAMID_ON_STOP_LOSS_MIN_CASH
+                pyramid_max_layers = getattr(trading_config, 'smart_pyramid_max_layers', settings.PYRAMID_MAX_LAYERS) if trading_config else settings.PYRAMID_MAX_LAYERS
 
-                    if holding_time_minutes < settings.STOP_LOSS_TIME_PROTECTION_MINUTES:
+                if holding_time_minutes < 60:
+                    return {
+                        "should_sell": False,
+                        "reason": f"刚买入{holding_time_minutes:.0f}分钟，亏损{pnl_percent:.2f}%可能是正常回调，暂不止损",
+                        "sell_percent": 0
+                    }
+                elif (pyramid_on_stop_loss_enabled and
+                      trend_score >= pyramid_on_stop_loss_trend_score and
+                      pos.pyramid_layers < pyramid_max_layers):
+                    position_percent = (pos.usdt_value / self.initial_balance * 100) if self.initial_balance > 0 else 0
+                    if (position_percent < pyramid_on_stop_loss_max_position_percent and
+                        self.available_balance >= pyramid_on_stop_loss_min_cash):
                         return {
                             "should_sell": False,
-                            "reason": f"刚买入{holding_time_minutes:.0f}分钟，亏损{pnl_percent:.2f}%可能是正常回调，暂不止损",
-                            "sell_percent": 0
+                            "reason": f"触发智能止损但趋势评分{trend_score}/10强劲，建议金字塔加仓",
+                            "sell_percent": 0,
+                            "suggest_pyramid": True,
+                            "pyramid_reason": f"智能止损拦截加仓：亏损{pnl_percent:.2f}%但趋势强劲"
                         }
-                    elif (pyramid_on_stop_loss_enabled and
-                          trend_score >= pyramid_on_stop_loss_trend_score and
-                          pos.pyramid_layers < pyramid_max_layers):
-                        # 计算仓位占比
-                        position_percent = (pos.usdt_value / self.initial_balance * 100) if self.initial_balance > 0 else 0
-                        # 检查是否满足加仓条件
-                        if (position_percent < pyramid_on_stop_loss_max_position_percent and
-                            self.available_balance >= pyramid_on_stop_loss_min_cash):
-                            return {
-                                "should_sell": False,
-                                "reason": f"触发智能止损但趋势评分{trend_score}/10强劲，建议金字塔加仓",
-                                "sell_percent": 0,
-                                "suggest_pyramid": True,
-                                "pyramid_reason": f"智能止损拦截加仓：亏损{pnl_percent:.2f}%但趋势强劲"
-                            }
-                        else:
-                            # 不满足加仓条件，执行止损
-                            return {
-                                "should_sell": True,
-                                "sell_percent": 1.0,
-                                "reason": f"触发智能止损！亏损{pnl_percent:.2f}% (止损线{smart_stop_loss}%)，趋势评分{trend_score}/10"
-                            }
                     else:
                         return {
                             "should_sell": True,
                             "sell_percent": 1.0,
                             "reason": f"触发智能止损！亏损{pnl_percent:.2f}% (止损线{smart_stop_loss}%)，趋势评分{trend_score}/10"
                         }
+                else:
+                    return {
+                        "should_sell": True,
+                        "sell_percent": 1.0,
+                        "reason": f"触发智能止损！亏损{pnl_percent:.2f}% (止损线{smart_stop_loss}%)，趋势评分{trend_score}/10"
+                    }
 
-            # 固定止损检查 - 但优先检查是否应该加仓（止损拦截逻辑）
             if pnl_percent <= pos.stop_loss_percent:
                 pyramid_on_stop_loss_enabled = getattr(trading_config, 'pyramid_on_stop_loss_enabled', settings.PYRAMID_ON_STOP_LOSS_ENABLED) if trading_config else settings.PYRAMID_ON_STOP_LOSS_ENABLED
                 pyramid_on_stop_loss_trend_score = getattr(trading_config, 'pyramid_on_stop_loss_trend_score', settings.PYRAMID_ON_STOP_LOSS_TREND_SCORE) if trading_config else settings.PYRAMID_ON_STOP_LOSS_TREND_SCORE
@@ -611,14 +622,11 @@ class SimulationManager:
                 pyramid_on_stop_loss_min_cash = getattr(trading_config, 'pyramid_on_stop_loss_min_cash', settings.PYRAMID_ON_STOP_LOSS_MIN_CASH) if trading_config else settings.PYRAMID_ON_STOP_LOSS_MIN_CASH
                 pyramid_max_layers = getattr(trading_config, 'smart_pyramid_max_layers', settings.PYRAMID_MAX_LAYERS) if trading_config else settings.PYRAMID_MAX_LAYERS
 
-                # 止损拦截：如果趋势强劲且满足条件，优先加仓而不是卖出
                 if (pyramid_on_stop_loss_enabled and
                     trend_score >= pyramid_on_stop_loss_trend_score and
                     pos.pyramid_layers < pyramid_max_layers):
-                    # 计算仓位占比
                     total_position_value = sum(p.usdt_value for p in self.positions.values())
                     position_percent = (pos.usdt_value / self.initial_balance * 100) if self.initial_balance > 0 else 0
-                    # 检查是否满足加仓条件
                     if (position_percent < pyramid_on_stop_loss_max_position_percent and
                         self.available_balance >= pyramid_on_stop_loss_min_cash):
                         return {
@@ -628,83 +636,69 @@ class SimulationManager:
                             "suggest_pyramid": True,
                             "pyramid_reason": f"止损拦截加仓：亏损{pnl_percent:.2f}%但趋势强劲"
                         }
-                # 不满足加仓条件，执行止损
                 return {
                     "should_sell": True,
                     "sell_percent": 1.0,
                     "reason": f"固定止损: 亏损{abs(pnl_percent):.2f}% <= {abs(pos.stop_loss_percent)}%"
                 }
 
-            dynamic_take_profit_enabled = getattr(trading_config, 'dynamic_take_profit_enabled', settings.DYNAMIC_TAKE_PROFIT_ENABLED) if trading_config else settings.DYNAMIC_TAKE_PROFIT_ENABLED
-            if dynamic_take_profit_enabled:
-                if getattr(trading_config, 'dynamic_take_profit_enabled', False):
-                    take_profit_score_tier1 = getattr(trading_config, 'take_profit_score_tier1', 9)
-                    take_profit_score_tier2 = getattr(trading_config, 'take_profit_score_tier2', 7)
-                    take_profit_score_tier3 = getattr(trading_config, 'take_profit_score_tier3', 5)
-                    if trend_score >= take_profit_score_tier1:
-                        dynamic_take_profit = getattr(trading_config, 'take_profit_trend_9_10', 15.0)
-                    elif trend_score >= take_profit_score_tier2:
-                        dynamic_take_profit = getattr(trading_config, 'take_profit_trend_7_8', 10.0)
-                    elif trend_score >= take_profit_score_tier3:
-                        dynamic_take_profit = getattr(trading_config, 'take_profit_trend_5_6', 8.0)
-                    else:
-                        dynamic_take_profit = getattr(trading_config, 'take_profit_trend_default', 6.0)
+            long_dynamic_take_profit_enabled = getattr(trading_config, 'long_dynamic_take_profit_enabled', True) if trading_config else True
+            if long_dynamic_take_profit_enabled:
+                if trend_score >= 9:
+                    dynamic_take_profit = getattr(trading_config, 'long_take_profit_trend_9_10', 15.0)
+                elif trend_score >= 7:
+                    dynamic_take_profit = getattr(trading_config, 'long_take_profit_trend_7_8', 10.0)
+                elif trend_score >= 5:
+                    dynamic_take_profit = getattr(trading_config, 'long_take_profit_trend_5_6', 8.0)
                 else:
-                    dynamic_take_profit = settings.TAKE_PROFIT_TREND_DEFAULT
-                    if trend_score >= 9:
-                        dynamic_take_profit = settings.TAKE_PROFIT_TREND_9_10
-                    elif trend_score >= 7:
-                        dynamic_take_profit = settings.TAKE_PROFIT_TREND_7_8
-                    elif trend_score >= 5:
-                        dynamic_take_profit = settings.TAKE_PROFIT_TREND_5_6
+                    dynamic_take_profit = getattr(trading_config, 'long_take_profit_trend_default', 6.0)
+            else:
+                dynamic_take_profit = abs(pos.take_profit_percent)
+                if trend_score >= 9:
+                    dynamic_take_profit = 15.0
+                elif trend_score >= 7:
+                    dynamic_take_profit = 10.0
+                elif trend_score >= 5:
+                    dynamic_take_profit = 8.0
 
-                pos.take_profit_percent = dynamic_take_profit
+            pos.take_profit_percent = dynamic_take_profit
 
-                if pnl_percent >= dynamic_take_profit:
-                    return {
-                        "should_sell": True,
-                        "sell_percent": 1.0,
-                        "reason": f"触发动态止盈！盈利{pnl_percent:.2f}% >= 止盈线{dynamic_take_profit}% (趋势评分{trend_score}/10)"
-                    }
+            if pnl_percent >= dynamic_take_profit:
+                return {
+                    "should_sell": True,
+                    "sell_percent": 1.0,
+                    "reason": f"触发动态止盈！盈利{pnl_percent:.2f}% >= 止盈线{dynamic_take_profit}% (趋势评分{trend_score}/10)"
+                }
 
-                if pnl_percent >= dynamic_take_profit * 0.5 and not pos.partial_profit_taken:
-                    return {
-                        "should_sell": True,
-                        "sell_percent": settings.PARTIAL_TAKE_PROFIT_PERCENT,
-                        "reason": f"部分止盈: 盈利{pnl_percent:.2f}% >= {dynamic_take_profit * 0.5:.2f}%"
-                    }
+            if pnl_percent >= dynamic_take_profit * 0.5 and not pos.partial_profit_taken:
+                return {
+                    "should_sell": True,
+                    "sell_percent": settings.PARTIAL_TAKE_PROFIT_PERCENT,
+                    "reason": f"部分止盈: 盈利{pnl_percent:.2f}% >= {dynamic_take_profit * 0.5:.2f}%"
+                }
 
         # 计算仓位占比
         position_percent = (pos.usdt_value / self.initial_balance * 100) if self.initial_balance > 0 else 0
         
         # 1. 小盈减仓：盈利≥止盈线50%且仓位>15%
-        if (trading_config and getattr(trading_config, 'small_profit_reduce_enabled', True) and
+        if (trading_config and getattr(trading_config, 'long_small_profit_reduce_enabled', True) and
             not pos.small_profit_reduced and pnl_percent > 0):
-            small_profit_take_profit_enabled = getattr(trading_config, 'dynamic_take_profit_enabled', False)
-            if small_profit_take_profit_enabled:
-                take_profit_score_tier1 = getattr(trading_config, 'take_profit_score_tier1', 9)
-                take_profit_score_tier2 = getattr(trading_config, 'take_profit_score_tier2', 7)
-                take_profit_score_tier3 = getattr(trading_config, 'take_profit_score_tier3', 5)
-                if trend_score >= take_profit_score_tier1:
-                    dynamic_take_profit = getattr(trading_config, 'take_profit_trend_9_10', 6.0)
-                elif trend_score >= take_profit_score_tier2:
-                    dynamic_take_profit = getattr(trading_config, 'take_profit_trend_7_8', 5.0)
-                elif trend_score >= take_profit_score_tier3:
-                    dynamic_take_profit = getattr(trading_config, 'take_profit_trend_5_6', 4.0)
-                else:
-                    dynamic_take_profit = getattr(trading_config, 'take_profit_trend_default', 3.0)
-            else:
-                dynamic_take_profit = settings.TAKE_PROFIT_TREND_DEFAULT
+            long_dynamic_take_profit_enabled = getattr(trading_config, 'long_dynamic_take_profit_enabled', False)
+            if long_dynamic_take_profit_enabled:
                 if trend_score >= 9:
-                    dynamic_take_profit = settings.TAKE_PROFIT_TREND_9_10
+                    dynamic_take_profit = getattr(trading_config, 'long_take_profit_trend_9_10', 15.0)
                 elif trend_score >= 7:
-                    dynamic_take_profit = settings.TAKE_PROFIT_TREND_7_8
+                    dynamic_take_profit = getattr(trading_config, 'long_take_profit_trend_7_8', 10.0)
                 elif trend_score >= 5:
-                    dynamic_take_profit = settings.TAKE_PROFIT_TREND_5_6
+                    dynamic_take_profit = getattr(trading_config, 'long_take_profit_trend_5_6', 8.0)
+                else:
+                    dynamic_take_profit = getattr(trading_config, 'long_take_profit_trend_default', 6.0)
+            else:
+                dynamic_take_profit = abs(pos.take_profit_percent)
             
-            threshold_percent = getattr(trading_config, 'small_profit_reduce_threshold_percent', 50.0)
-            position_threshold = getattr(trading_config, 'small_profit_reduce_position_threshold', 15.0)
-            reduce_ratio = getattr(trading_config, 'small_profit_reduce_ratio', 50.0)
+            threshold_percent = getattr(trading_config, 'long_small_profit_reduce_threshold_percent', 50.0)
+            position_threshold = getattr(trading_config, 'long_small_profit_reduce_position_threshold', 15.0)
+            reduce_ratio = getattr(trading_config, 'long_small_profit_reduce_ratio', 50.0)
             
             if pnl_percent >= dynamic_take_profit * (threshold_percent / 100) and position_percent > position_threshold:
                 pos.small_profit_reduced = True
@@ -810,7 +804,8 @@ class SimulationManager:
 
     def check_short_cover_signals(self, coin: str, current_price: float, 
                                    trading_config=None, volatility: float = 0.0, 
-                                   turnover_24h: float = 0.0, trend_score: float = 5.0) -> Dict:
+                                   turnover_24h: float = 0.0, trend_score: float = 5.0,
+                                   pyramid_time_protection_minutes: int = 60) -> Dict:
         """
         检查空单平仓信号
         trading_config: 交易引擎配置，用于与实盘保持一致
@@ -827,6 +822,23 @@ class SimulationManager:
 
         leverage = pos.leverage if hasattr(pos, 'leverage') and pos.leverage else 1.0
         pnl_percent = (pos.entry_price - current_price) / pos.entry_price * 100 * leverage
+
+        # 持仓时间保护：刚加仓后禁止止损/平仓（对齐 ai_trading_bot.js）
+        pyramid_add_time = getattr(pos, 'pyramid_add_time', None)
+        time_protection_minutes = pyramid_time_protection_minutes
+        if pyramid_add_time:
+            from datetime import datetime, timezone, timedelta
+            BEIJING_TZ = timezone(timedelta(hours=8))
+            holding_minutes = (datetime.now(BEIJING_TZ) - pyramid_add_time).total_seconds() / 60
+            logger.info(f"[时间保护检查] {coin} 做空金字塔加仓时间: {pyramid_add_time}, 已持仓: {holding_minutes:.1f}分钟, 保护期: {time_protection_minutes}分钟")
+            if holding_minutes < time_protection_minutes:
+                logger.info(f"[时间保护生效] {coin} 做空金字塔加仓后{holding_minutes:.1f}分钟，时间保护未到期({time_protection_minutes}分钟)，禁止平仓")
+                return {
+                    "should_cover": False,
+                    "reason": f"做空金字塔加仓后{holding_minutes:.1f}分钟，时间保护未到期({time_protection_minutes}分钟)，禁止平仓"
+                }
+        else:
+            logger.debug(f"[时间保护检查] {coin} 无金字塔加仓时间记录，跳过时间保护")
 
         if getattr(trading_config, 'dynamic_bands_enabled', False):
             volatility_factor = min(2.0, max(0.5, volatility / 3)) if volatility > 0 else 1.0
@@ -868,23 +880,14 @@ class SimulationManager:
                 }
 
         else:
-            short_smart_stop_loss_enabled = getattr(trading_config, 'smart_stop_loss_enabled', settings.SMART_STOP_LOSS_ENABLED) if trading_config else settings.SMART_STOP_LOSS_ENABLED
+            short_smart_stop_loss_enabled = getattr(trading_config, 'short_smart_stop_loss_enabled', True) if trading_config else True
             if short_smart_stop_loss_enabled:
-                if getattr(trading_config, 'smart_stop_loss_enabled', False):
-                    short_stop_loss_score_tier1 = getattr(trading_config, 'stop_loss_score_tier1', 8)
-                    short_stop_loss_score_tier2 = getattr(trading_config, 'stop_loss_score_tier2', 6)
-                    if trend_score >= short_stop_loss_score_tier1:
-                        short_stop_loss = abs(getattr(trading_config, 'stop_loss_trend_8_plus', 3.0))
-                    elif trend_score >= short_stop_loss_score_tier2:
-                        short_stop_loss = abs(getattr(trading_config, 'stop_loss_trend_6_7', 2.0))
-                    else:
-                        short_stop_loss = abs(getattr(trading_config, 'stop_loss_trend_default', 1.5))
+                if trend_score <= 2:
+                    short_stop_loss = abs(getattr(trading_config, 'short_stop_loss_trend_0_2', 3.0))
+                elif trend_score <= 4:
+                    short_stop_loss = abs(getattr(trading_config, 'short_stop_loss_trend_3_4', 2.0))
                 else:
-                    short_stop_loss = abs(settings.STOP_LOSS_TREND_DEFAULT)
-                    if trend_score >= 8:
-                        short_stop_loss = abs(settings.STOP_LOSS_TREND_8_PLUS)
-                    elif trend_score >= 6:
-                        short_stop_loss = abs(settings.STOP_LOSS_TREND_6_7)
+                    short_stop_loss = abs(getattr(trading_config, 'short_stop_loss_trend_default', 1.5))
             else:
                 short_stop_loss = abs(pos.stop_loss_percent)
 
@@ -895,22 +898,16 @@ class SimulationManager:
                     "reason": f"空单止损: 亏损{-pnl_percent:.2f}% >= {short_stop_loss:.2f}%"
                 }
 
-            short_dynamic_take_profit_enabled = getattr(trading_config, 'dynamic_take_profit_enabled', settings.DYNAMIC_TAKE_PROFIT_ENABLED) if trading_config else settings.DYNAMIC_TAKE_PROFIT_ENABLED
+            short_dynamic_take_profit_enabled = getattr(trading_config, 'short_dynamic_take_profit_enabled', True) if trading_config else True
             if short_dynamic_take_profit_enabled:
-                if getattr(trading_config, 'dynamic_take_profit_enabled', False):
-                    take_profit_score_tier1 = getattr(trading_config, 'take_profit_score_tier1', 9)
-                    take_profit_score_tier2 = getattr(trading_config, 'take_profit_score_tier2', 7)
-                    take_profit_score_tier3 = getattr(trading_config, 'take_profit_score_tier3', 5)
-                    if trend_score >= take_profit_score_tier1:
-                        short_take_profit = getattr(trading_config, 'take_profit_trend_9_10', 15.0)
-                    elif trend_score >= take_profit_score_tier2:
-                        short_take_profit = getattr(trading_config, 'take_profit_trend_7_8', 10.0)
-                    elif trend_score >= take_profit_score_tier3:
-                        short_take_profit = getattr(trading_config, 'take_profit_trend_5_6', 8.0)
-                    else:
-                        short_take_profit = getattr(trading_config, 'take_profit_trend_default', 6.0)
+                if trend_score <= 1:
+                    short_take_profit = getattr(trading_config, 'short_take_profit_trend_0_1', 15.0)
+                elif trend_score <= 3:
+                    short_take_profit = getattr(trading_config, 'short_take_profit_trend_2_3', 10.0)
+                elif trend_score == 4:
+                    short_take_profit = getattr(trading_config, 'short_take_profit_trend_4', 8.0)
                 else:
-                    short_take_profit = abs(pos.take_profit_percent)
+                    short_take_profit = getattr(trading_config, 'short_take_profit_trend_default', 6.0)
             else:
                 short_take_profit = abs(pos.take_profit_percent)
 
@@ -1053,6 +1050,10 @@ class SimulationManager:
         trade_stats.trade_log.daily_trade_count = 0
         trade_stats.trade_log.last_buy_time.clear()
         trade_stats._save_trade_log()
+        
+        # 清空 trading_engine 的日交易计数
+        from app.services.trading_engine import trading_engine
+        trading_engine.daily_trade_count.clear()
     
     def reset_balance(self, initial_balance: float = 1000.0):
         self.initial_balance = initial_balance
@@ -1169,6 +1170,9 @@ class SimulationManager:
         pos.usdt_value = total_value
         pos.pyramid_layers = layer
         pos.pyramid_layer_prices.append(price)
+        
+        # 记录加仓时间，用于时间保护（对齐 ai_trading_bot.js）
+        pos.pyramid_add_time = datetime.now(BEIJING_TZ)
 
         # 记录交易
         trade = SimulatedTrade(
@@ -1178,7 +1182,9 @@ class SimulationManager:
             amount=amount,
             usdt_value=usdt_value,
             reason=f"金字塔加仓第{layer}层 - {reason}",
-            timestamp=datetime.now(BEIJING_TZ).isoformat()
+            timestamp=datetime.now(BEIJING_TZ).isoformat(),
+            leverage=pos.leverage if hasattr(pos, 'leverage') else 1.0,
+            is_swap=pos.is_swap if hasattr(pos, 'is_swap') else False
         )
         self.trades.append(trade)
 
@@ -1344,6 +1350,9 @@ class SimulationManager:
         pos.short_pyramid_layers = layer
         pos.short_pyramid_layer_prices.append(price)
         pos.short_pyramid_base_price = getattr(pos, 'short_pyramid_base_price', pos.entry_price)
+        
+        # 记录加仓时间，用于时间保护（对齐 ai_trading_bot.js）
+        pos.pyramid_add_time = datetime.now(BEIJING_TZ)
 
         trade = SimulatedTrade(
             coin=coin,
@@ -1352,7 +1361,9 @@ class SimulationManager:
             amount=amount,
             usdt_value=usdt_value,
             reason=f"做空金字塔加仓第{layer}层 - {reason}",
-            timestamp=datetime.now(BEIJING_TZ).isoformat()
+            timestamp=datetime.now(BEIJING_TZ).isoformat(),
+            leverage=pos.leverage if hasattr(pos, 'leverage') else 1.0,
+            is_swap=pos.is_swap if hasattr(pos, 'is_swap') else False
         )
         self.trades.append(trade)
 

@@ -1,6 +1,12 @@
 from dataclasses import dataclass
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from app.core.okx_client import OKXClient
+from app.strategies.common_indicators import (
+    calculate_rsi_simple,
+    calculate_ma,
+    calculate_volatility,
+    calculate_volume_ratio
+)
 
 
 @dataclass
@@ -331,48 +337,11 @@ async def calculate_resonance_score(
                 candles = candles_result["data"]
                 prices = [float(c[4]) for c in reversed(candles)]
                 volumes = [float(c[5]) for c in reversed(candles)]
-                
-                if len(prices) >= 14:
-                    gains = 0
-                    losses = 0
-                    for i in range(len(prices) - 14, len(prices)):
-                        change = prices[i] - prices[i - 1]
-                        if change > 0:
-                            gains += change
-                        else:
-                            losses -= change
-                    avg_gain = gains / 14
-                    avg_loss = losses / 14
-                    if avg_loss == 0:
-                        rsi = 100
-                    else:
-                        rs = avg_gain / avg_loss
-                        rsi = 100 - (100 / (1 + rs))
-                else:
-                    rsi = 50
-                
-                if len(prices) >= 5:
-                    ma5 = sum(prices[-5:]) / 5
-                else:
-                    ma5 = current_price
-                
-                if len(volumes) >= 20:
-                    avg_vol = sum(volumes[-20:]) / 20
-                    current_vol = volumes[-1] if volumes else 1
-                    volume_ratio = current_vol / avg_vol if avg_vol > 0 else 1.0
-                else:
-                    volume_ratio = 1.0
-                
-                if len(prices) >= 2:
-                    changes = [(prices[i] - prices[i-1]) / prices[i-1] * 100 for i in range(1, len(prices))]
-                    if changes:
-                        mean_change = sum(changes) / len(changes)
-                        variance = sum((c - mean_change) ** 2 for c in changes) / len(changes)
-                        volatility = (variance ** 0.5)
-                    else:
-                        volatility = 1.0
-                else:
-                    volatility = 1.0
+
+                rsi = calculate_rsi_simple(prices, 14) if len(prices) >= 15 else 50
+                ma5 = calculate_ma(prices, 5) if len(prices) >= 5 else current_price
+                volume_ratio = calculate_volume_ratio(volumes, 20) if len(volumes) >= 20 else 1.0
+                volatility = calculate_volatility(prices) if len(prices) >= 2 else 1.0
             else:
                 rsi = 50
                 volume_ratio = 1.0
@@ -420,7 +389,7 @@ async def calculate_resonance_score(
     if total_score < 6:
         reasons.append(f"共振分数{total_score}<6")
     if not market_env.can_trade:
-        reasons.append("大盘环境不佳")
+        reasons.append(f"大盘环境不佳(BTC={market_env.btc_score}分,ETH={market_env.eth_score}分,资金费率={market_env.funding_score}分,综合={market_env.score}分<4)")
     if not technical.passed and technical.score < 5:
         reasons.append(f"技术面不佳({technical.reason})")
     if not capital_flow.has_inflow and capital_flow.score < 4:

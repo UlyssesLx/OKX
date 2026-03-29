@@ -20,6 +20,16 @@ class FeishuNotifier:
         self.token_expire_time: Optional[float] = None
         self.webhook_url: str = ""
         self.chat_id: str = ""
+        
+        # 速率限制：记录最近发送时间
+        self._last_send_time: float = 0
+        self._min_interval: float = 0.5  # 最小发送间隔 0.5 秒
+        self._send_lock = asyncio.Lock()  # 发送锁，防止并发
+        
+        # 重试配置
+        self._max_retries: int = 3
+        self._retry_delay: float = 1.0  # 重试延迟 1 秒
+        self._timeout: float = 15.0  # 超时时间 15 秒
 
     def configure(self, app_id: str = "", app_secret: str = "", enabled: bool = True, webhook_url: str = "", chat_id: str = ""):
         self.app_id = app_id
@@ -93,13 +103,18 @@ class FeishuNotifier:
             return False
 
     async def _send_message_oauth(self, title: str, content: str, msg_type: str = "interactive", chat_id: str = "") -> bool:
-        """使用 OAuth2.0 方式发送消息"""
-        access_token = await self._get_access_token()
-        if not access_token:
-            logger.warning("无法获取飞书 Access Token")
-            return False
+        """使用 OAuth2.0 方式发送消息（带速率限制和重试）"""
+        async with self._send_lock:  # 加锁防止并发
+            # 速率限制：确保最小间隔
+            elapsed = time.time() - self._last_send_time
+            if elapsed < self._min_interval:
+                await asyncio.sleep(self._min_interval - elapsed)
+            
+            access_token = await self._get_access_token()
+            if not access_token:
+                logger.warning("无法获取飞书 Access Token")
+                return False
 
-        try:
             timestamp = datetime.now(BEIJING_TZ).strftime("%Y-%m-%d %H:%M:%S")
 
             if msg_type == "trade":
@@ -111,8 +126,6 @@ class FeishuNotifier:
             else:
                 card_content = self._build_simple_card(title, content, timestamp)
 
-            # 如果没有指定 chat_id，使用 open_chat_id 方式（需要用户授权）
-            # 这里使用发送给机器人的方式
             url = "https://open.feishu.cn/open-apis/message/v4/send"
             
             payload = {
@@ -120,50 +133,75 @@ class FeishuNotifier:
                 "card": card_content
             }
 
-            # 如果有 chat_id，发送到指定群
             if chat_id:
                 payload["chat_id"] = chat_id
             else:
-                # 发送到与机器人的单聊（需要用户先与机器人对话）
-                # 或者使用 open_id 方式
                 logger.warning("未指定 chat_id，消息可能无法送达")
                 return False
 
-            async with aiohttp.ClientSession() as session:
-                async with session.post(
-                    url,
-                    json=payload,
-                    headers={
-                        "Content-Type": "application/json",
-                        "Authorization": f"Bearer {access_token}"
-                    },
-                    timeout=aiohttp.ClientTimeout(total=10)
-                ) as response:
-                    if response.status == 200:
-                        result = await response.json()
-                        if result.get("code") == 0:
-                            logger.info(f"飞书通知发送成功: {title}")
-                            return True
-                        else:
-                            logger.warning(f"飞书通知发送失败: {result}")
-                            return False
-                    else:
-                        logger.warning(f"飞书通知HTTP错误: {response.status}")
-                        return False
+            # 重试机制
+            for attempt in range(self._max_retries):
+                try:
+                    async with aiohttp.ClientSession() as session:
+                        async with session.post(
+                            url,
+                            json=payload,
+                            headers={
+                                "Content-Type": "application/json",
+                                "Authorization": f"Bearer {access_token}"
+                            },
+                            timeout=aiohttp.ClientTimeout(total=self._timeout)
+                        ) as response:
+                            self._last_send_time = time.time()  # 记录发送时间
+                            
+                            if response.status == 200:
+                                result = await response.json()
+                                if result.get("code") == 0:
+                                    logger.info(f"飞书通知发送成功: {title}")
+                                    return True
+                                else:
+                                    logger.warning(f"飞书通知发送失败: {result}")
+                                    # 速率限制错误，等待后重试
+                                    if result.get("code") == 99991663:
+                                        wait_time = 2.0 if attempt < self._max_retries - 1 else 0
+                                        logger.warning(f"飞书 API 速率限制，等待 {wait_time} 秒后重试 (尝试 {attempt + 1}/{self._max_retries})")
+                                        if wait_time > 0:
+                                            await asyncio.sleep(wait_time)
+                                            continue
+                                    return False
+                            else:
+                                logger.warning(f"飞书通知HTTP错误: {response.status}")
+                                if attempt < self._max_retries - 1:
+                                    await asyncio.sleep(self._retry_delay)
+                                    continue
+                                return False
 
-        except asyncio.TimeoutError:
-            logger.warning("飞书通知发送超时")
-            return False
-        except Exception as e:
-            logger.error(f"飞书通知发送异常: {e}")
+                except asyncio.TimeoutError:
+                    logger.warning(f"飞书通知发送超时 (尝试 {attempt + 1}/{self._max_retries})")
+                    if attempt < self._max_retries - 1:
+                        await asyncio.sleep(self._retry_delay)
+                        continue
+                    return False
+                except Exception as e:
+                    logger.error(f"飞书通知发送异常: {e} (尝试 {attempt + 1}/{self._max_retries})")
+                    if attempt < self._max_retries - 1:
+                        await asyncio.sleep(self._retry_delay)
+                        continue
+                    return False
+            
             return False
 
     async def _send_message_webhook(self, title: str, content: str, msg_type: str = "interactive") -> bool:
-        """使用 Webhook 方式发送消息（向后兼容）"""
-        if not self.webhook_url:
-            return False
+        """使用 Webhook 方式发送消息（向后兼容，带速率限制和重试）"""
+        async with self._send_lock:  # 加锁防止并发
+            # 速率限制：确保最小间隔
+            elapsed = time.time() - self._last_send_time
+            if elapsed < self._min_interval:
+                await asyncio.sleep(self._min_interval - elapsed)
+            
+            if not self.webhook_url:
+                return False
 
-        try:
             timestamp = datetime.now(BEIJING_TZ).strftime("%Y-%m-%d %H:%M:%S")
 
             if msg_type == "trade":
@@ -180,30 +218,49 @@ class FeishuNotifier:
                 "card": card_content
             }
 
-            async with aiohttp.ClientSession() as session:
-                async with session.post(
-                    self.webhook_url,
-                    json=payload,
-                    headers={"Content-Type": "application/json"},
-                    timeout=aiohttp.ClientTimeout(total=10)
-                ) as response:
-                    if response.status == 200:
-                        result = await response.json()
-                        if result.get("code") == 0 or result.get("StatusCode") == 0:
-                            logger.info(f"飞书通知发送成功: {title}")
-                            return True
-                        else:
-                            logger.warning(f"飞书通知发送失败: {result}")
-                            return False
-                    else:
-                        logger.warning(f"飞书通知HTTP错误: {response.status}")
-                        return False
+            # 重试机制
+            for attempt in range(self._max_retries):
+                try:
+                    async with aiohttp.ClientSession() as session:
+                        async with session.post(
+                            self.webhook_url,
+                            json=payload,
+                            headers={"Content-Type": "application/json"},
+                            timeout=aiohttp.ClientTimeout(total=self._timeout)
+                        ) as response:
+                            self._last_send_time = time.time()  # 记录发送时间
+                            
+                            if response.status == 200:
+                                result = await response.json()
+                                if result.get("code") == 0 or result.get("StatusCode") == 0:
+                                    logger.info(f"飞书通知发送成功: {title}")
+                                    return True
+                                else:
+                                    logger.warning(f"飞书通知发送失败: {result}")
+                                    if attempt < self._max_retries - 1:
+                                        await asyncio.sleep(self._retry_delay)
+                                        continue
+                                    return False
+                            else:
+                                logger.warning(f"飞书通知HTTP错误: {response.status}")
+                                if attempt < self._max_retries - 1:
+                                    await asyncio.sleep(self._retry_delay)
+                                    continue
+                                return False
 
-        except asyncio.TimeoutError:
-            logger.warning("飞书通知发送超时")
-            return False
-        except Exception as e:
-            logger.error(f"飞书通知发送异常: {e}")
+                except asyncio.TimeoutError:
+                    logger.warning(f"飞书通知发送超时 (尝试 {attempt + 1}/{self._max_retries})")
+                    if attempt < self._max_retries - 1:
+                        await asyncio.sleep(self._retry_delay)
+                        continue
+                    return False
+                except Exception as e:
+                    logger.error(f"飞书通知发送异常: {e} (尝试 {attempt + 1}/{self._max_retries})")
+                    if attempt < self._max_retries - 1:
+                        await asyncio.sleep(self._retry_delay)
+                        continue
+                    return False
+            
             return False
 
     def _build_trade_card(self, title: str, content: str, timestamp: str) -> Dict:

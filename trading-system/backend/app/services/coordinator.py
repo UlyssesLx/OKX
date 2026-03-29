@@ -93,8 +93,8 @@ class Coordinator:
     def _sync_evolution_params(self):
         config = trading_engine.config
         strategy_evolution.log.current_params.long = StrategyParams(
-            stop_loss=config.stop_loss_trend_8_plus,
-            take_profit=config.take_profit_trend_9_10,
+            stop_loss=config.long_stop_loss_trend_8_plus,
+            take_profit=config.long_take_profit_trend_9_10,
             max_positions=config.long_max_positions,
             trade_size=config.long_position_size,
             sentiment_threshold=config.sentiment_threshold
@@ -236,24 +236,19 @@ class Coordinator:
                 log_collector(f"⚠️ 策略暂停中，{evolution_result.get('remaining', 0):.0f}分钟后恢复", "warning")
                 logger.warning(f"⚠️ 策略暂停中")
             elif evolution_result.get("long") or evolution_result.get("short"):
-                log_collector("✅ 策略参数已自动调整", "success")
-                logger.info("✅ 策略参数已自动调整")
+                log_collector("✅ 策略迭代分析完成", "success")
+                logger.info("✅ 策略迭代分析完成")
 
+                # 显示迭代建议（不覆盖用户配置）
                 if evolution_result.get("long", {}).get("params"):
                     long_params = evolution_result["long"]["params"]
-                    trading_engine.config.stop_loss_trend_8_plus = long_params.get("stop_loss", -3.0)
-                    trading_engine.config.take_profit_trend_9_10 = long_params.get("take_profit", 15.0)
-                    trading_engine.config.long_max_positions = long_params.get("max_positions", 5)
-                    trading_engine.config.long_position_size = long_params.get("trade_size", 60.0)
-                    logger.info(f"  做多参数已更新: 止损{long_params.get('stop_loss')}, 止盈{long_params.get('take_profit')}")
+                    logger.info(f"  📊 做多迭代建议: 止损{long_params.get('stop_loss')}%, 止盈{long_params.get('take_profit')}%, 金额${long_params.get('trade_size')}")
+                    logger.info(f"     当前用户配置: 止损{trading_engine.config.stop_loss_percent}%, 止盈{trading_engine.config.take_profit_percent}%, 金额${trading_engine.config.trade_size}")
 
                 if evolution_result.get("short", {}).get("params"):
                     short_params = evolution_result["short"]["params"]
-                    trading_engine.config.short_stop_loss_percent = abs(short_params.get("stop_loss", 3.0))
-                    trading_engine.config.short_take_profit_percent = short_params.get("take_profit", 6.0)
-                    trading_engine.config.short_max_positions = short_params.get("max_positions", 1)
-                    trading_engine.config.short_position_size = short_params.get("trade_size", 40.0)
-                    logger.info(f"  做空参数已更新: 止损{short_params.get('stop_loss')}, 止盈{short_params.get('take_profit')}")
+                    logger.info(f"  📊 做空迭代建议: 止损{short_params.get('stop_loss')}%, 止盈{short_params.get('take_profit')}%, 金额${short_params.get('trade_size')}")
+                    logger.info(f"     当前用户配置: 止损{trading_engine.config.short_stop_loss_percent}%, 止盈{trading_engine.config.short_take_profit_1}%, 金额${trading_engine.config.short_position_size}")
 
             evolution_status = strategy_evolution.get_status()
             result["steps"]["evolution"] = evolution_status
@@ -278,9 +273,12 @@ class Coordinator:
             log_collector("=== 数据提醒完成 ===", "info")
 
         except Exception as e:
-            error_msg = f"周期执行失败: {str(e)}"
+            import traceback
+            error_msg = f"周期执行失败：{str(e)}"
+            error_traceback = traceback.format_exc()
             log_collector(f"❌ {error_msg}", "error")
             logger.error(error_msg)
+            logger.error(f"错误堆栈：{error_traceback}")
             self.errors.append(f"{datetime.now().isoformat()}: {error_msg}")
             result["status"] = "error"
             result["error"] = error_msg
@@ -331,26 +329,6 @@ class Coordinator:
                 logger.debug(f"⏰ 固定检查间隔: {adjusted_interval}分钟")
             
             await asyncio.sleep(adjusted_interval * 60)
-    
-    def start(self, interval_minutes: int = 5, dry_run: bool = True):
-        if self.running:
-            logger.warning("协调器已在运行中")
-            return
-
-        if emergency_stop.is_stopped():
-            logger.error("紧急停止状态，无法启动")
-            return
-
-        self._sync_evolution_params()
-        self.running = True
-        self._interval_minutes = interval_minutes
-        self._dry_run = dry_run
-        self._background_task = asyncio.create_task(
-            self._run_periodic(interval_minutes, dry_run)
-        )
-        # 添加任务完成回调，用于自动重启
-        self._background_task.add_done_callback(self._on_task_done)
-        logger.info(f"🚀 协调器已启动，间隔 {interval_minutes} 分钟，模拟模式: {dry_run}")
     
     def _on_task_done(self, task):
         """任务完成回调，用于自动重启"""
@@ -451,7 +429,7 @@ class Coordinator:
             # 每10秒检查一次
             await asyncio.sleep(10)
 
-    def start(self, interval_minutes: int = 5, dry_run: bool = True):
+    async def start(self, interval_minutes: int = 5, dry_run: bool = True):
         if self.running:
             logger.warning("协调器已在运行中")
             return
@@ -462,10 +440,13 @@ class Coordinator:
 
         self._sync_evolution_params()
         self.running = True
-        self._last_okx_success_time = get_beijing_time()  # 初始化时设置
+        self._interval_minutes = interval_minutes
+        self._dry_run = dry_run
+        self._last_okx_success_time = get_beijing_time()
         self._background_task = asyncio.create_task(
             self._run_periodic(interval_minutes, dry_run)
         )
+        self._background_task.add_done_callback(self._on_task_done)
         self._okx_health_check_task = asyncio.create_task(
             self._check_okx_health()
         )
